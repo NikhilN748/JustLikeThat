@@ -546,6 +546,8 @@ async function maybeRecoverMissedClockOut() {
 
 
 function renderPayrollReview(days) {
+  // Guard: payroll card elements may not be present if card was removed
+  if (!$('payrollReviewSub')) return;
   const review = getPayrollReview(days);
   $('payrollReviewSub').textContent = review.issues.length
     ? `${review.issues.length} issue${review.issues.length !== 1 ? 's' : ''} need attention before payroll`
@@ -798,7 +800,8 @@ function getEntry(key) {
 
 function setEntry(key, entry) {
   const clean = normalizeEntry(entry, key);
-  if (!clean.sessions.length && !clean.note) delete db[key];
+  const hasMeaningfulStatus = clean.status && clean.status !== 'open';
+  if (!clean.sessions.length && !clean.note && !hasMeaningfulStatus) delete db[key];
   else db[key] = clean;
 }
 
@@ -1010,8 +1013,6 @@ function getPayrollReview(days) {
   let submitted = 0;
 
   keys.forEach(key => {
-    const entry = getEntry(key);
-    if (!hasAnyData(entry)) return;
     const status = getEntryStatus(key);
     if (status === 'approved') approved++;
     else if (status === 'submitted') submitted++;
@@ -1034,7 +1035,7 @@ async function submitWeekForApproval() {
   const review = getPayrollReview(getPayPeriodKeys());
   review.keys.forEach(key => {
     const entry = getEntry(key);
-    if (hasAnyData(entry) && !isEntryLocked(key)) setEntryStatus(key, 'submitted');
+    if (!isEntryLocked(key) && getEntryStatus(key) !== 'approved') setEntryStatus(key, 'submitted');
   });
   persist();
   renderWeek();
@@ -1048,8 +1049,7 @@ async function approveWeek() {
     if (!ok) return;
   }
   review.keys.forEach(key => {
-    const entry = getEntry(key);
-    if (hasAnyData(entry) && !isEntryLocked(key)) setEntryStatus(key, 'approved');
+    if (!isEntryLocked(key)) setEntryStatus(key, 'approved');
   });
   persist();
   renderWeek();
@@ -1058,14 +1058,18 @@ async function approveWeek() {
 
 async function lockWeek() {
   const review = getPayrollReview(getPayPeriodKeys());
+  // Block if any entries are still open or submitted (not yet approved)
+  if (review.open > 0 || review.submitted > 0) {
+    iosAlert('Please wait until the pay gets approved.', 'Not Yet Approved');
+    return;
+  }
   const ok = await iosConfirm(
     'Mark this week as Paid? Paid entries are locked and can no longer be edited.',
     { okLabel: 'Mark as Paid', danger: true, title: '💰 Mark Week as Paid' }
   );
   if (!ok) return;
   review.keys.forEach(key => {
-    const entry = getEntry(key);
-    if (hasAnyData(entry)) setEntryStatus(key, 'locked', { lockedAt: new Date().toISOString() });
+    setEntryStatus(key, 'locked', { lockedAt: new Date().toISOString() });
   });
   persist();
   renderWeek();
@@ -1282,6 +1286,7 @@ function renderWeek() {
     if (note) subParts.push(esc(note));
 
     const isPaid = isEntryLocked(key);
+    const isApproved = !isPaid && getEntryStatus(key) === 'approved';
     const row = document.createElement('div');
     row.className = 'day-row';
     row.onclick = () => openSheet(key, d);
@@ -1289,6 +1294,7 @@ function renderWeek() {
     if (isPaid) {
       row.style.opacity = '0.6';
       row.style.cursor = 'default';
+      row.onclick = null;
       row.innerHTML = `
         <div class="day-circle ${circClass}">
           <span class="dc-name">${DS[d.getDay()]}</span>
@@ -1305,6 +1311,27 @@ function renderWeek() {
           ${worked ? `<div class="day-earn">${fmtMins(worked)}</div>` : ''}
         </div>
         <span class="material-symbols-outlined day-chev" style="font-size:16px;">lock</span>`;
+    } else if (isApproved) {
+      row.style.opacity = '0.75';
+      row.style.cursor = 'default';
+      row.onclick = () => iosAlert('This entry has been approved and is locked from editing.', 'Approved & Locked');
+      row.innerHTML = `
+        <div class="day-circle ${circClass}">
+          <span class="dc-name">${DS[d.getDay()]}</span>
+          <span class="dc-num">${d.getDate()}</span>
+        </div>
+        <div class="day-mid">
+          <div class="day-row-top">
+            <div class="day-time-str">${hasData ? esc(range.text || 'Approved') : 'Approved'}</div>
+            <span class="day-status-pill approved">Approved</span>
+          </div>
+          ${subParts.length ? `<div class="day-sub">${subParts.join(' · ')}</div>` : ''}
+        </div>
+        <div class="day-right">
+          <div class="day-hrs ${worked?'':'zero'}">${worked ? `<span class="day-hrs-sym">${curSym()}</span>${(hourlyRate > 0 ? (hourlyRate * worked / 60).toFixed(0) : fmtMins(worked))}` : '—'}</div>
+          ${worked && hourlyRate > 0 ? `<div class="day-earn">${fmtMins(worked)}</div>` : ''}
+        </div>
+        <span class="material-symbols-outlined day-chev" style="font-size:16px;color:var(--green);">lock</span>`;
     } else {
       row.innerHTML = `
         <div class="day-circle ${circClass}">
@@ -1316,7 +1343,7 @@ function renderWeek() {
             <div class="day-time-str ${hasData?'':'empty'}">
               ${hasData ? esc(range.text || 'Tap to edit') : 'Tap to add hours'}
             </div>
-            ${hasAnyData(e) ? `<span class="day-status-pill ${status.cls}">${status.label}</span>` : ''}
+            ${(hasAnyData(e) || status.cls !== 'open') ? `<span class="day-status-pill ${status.cls}">${status.label}</span>` : ''}
           </div>
           ${subParts.length ? `<div class="day-sub">${subParts.join(' · ')}</div>` : ''}
         </div>
@@ -1341,7 +1368,6 @@ function renderWeek() {
   const daysEl = document.getElementById('daysLogged');
   if (daysEl) daysEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;">timer</span> ${logged} day${logged!==1?'s':''} logged${selectedClientFilter || selectedProjectFilter ? ' (filtered)' : ''}`;
   renderProjectSummary(days, filters);
-  renderPayrollReview(days);
   renderOvertimeBar(totalMins);
 }
 
@@ -2163,6 +2189,10 @@ function openSheet(key, dateObj) {
     iosAlert('This week has been marked as Paid ✓. Paid hours cannot be edited.', 'Paid & Locked');
     return;
   }
+  if (getEntryStatus(key) === 'approved') {
+    iosAlert('This entry has been approved and is locked from editing.', 'Approved & Locked');
+    return;
+  }
   editKey = key;
   const e = getEntry(key);
   const dow = dateObj.getDay();
@@ -2212,6 +2242,10 @@ async function saveEntry() {
   if (!editKey) return;
   if (isEntryLocked(editKey)) {
     iosAlert('This week has been marked as Paid ✓. Paid hours cannot be edited.', 'Paid & Locked');
+    return;
+  }
+  if (getEntryStatus(editKey) === 'approved') {
+    iosAlert('This entry has been approved and is locked from editing.', 'Approved & Locked');
     return;
   }
 

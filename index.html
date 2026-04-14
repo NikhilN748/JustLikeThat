@@ -384,6 +384,7 @@ body {
 .payroll-issues { padding: 0 18px 12px; display: flex; flex-direction: column; gap: 8px; }
 .payroll-issue { background: var(--amber-bg); color: var(--amber); border-radius: 10px; padding: 10px 12px; font-size: 13px; font-weight: 500; }
 .payroll-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 18px 16px; }
+.week-status-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 14px 0 4px; margin-top: 6px; border-top: 1px solid var(--fill); }
 .payroll-btn { border: none; border-radius: 10px; padding: 12px 8px; font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; }
 .payroll-btn.submit  { background: var(--blue-bg); color: var(--blue); }
 .payroll-btn.approve { background: var(--green-bg); color: var(--green); }
@@ -1110,45 +1111,16 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
     <div id="otBarSub" style="font-size:11px;color:var(--tertiary);margin-top:6px;text-align:right;"></div>
   </div>
 
-  <!-- Payroll review card -->
-  <div class="payroll-card">
-    <div class="payroll-head">
-      <div>
-        <div class="payroll-title">Payroll Review</div>
-        <div class="payroll-sub" id="payrollReviewSub">Review pay period before payroll</div>
-      </div>
-      <button class="review-link" onclick="openPayrollReviewSheet()">Open →</button>
-    </div>
-    <div class="payroll-stats">
-      <div class="payroll-stat">
-        <div class="payroll-stat-val" id="payrollOpenCount">0</div>
-        <div class="payroll-stat-lbl">Open</div>
-      </div>
-      <div class="payroll-stat">
-        <div class="payroll-stat-val" id="payrollSubmittedCount">0</div>
-        <div class="payroll-stat-lbl">Submitted</div>
-      </div>
-      <div class="payroll-stat">
-        <div class="payroll-stat-val" id="payrollApprovedCount">0</div>
-        <div class="payroll-stat-lbl">Approved</div>
-      </div>
-      <div class="payroll-stat">
-        <div class="payroll-stat-val" id="payrollLockedCount">0</div>
-        <div class="payroll-stat-lbl">Paid</div>
-      </div>
-    </div>
-    <div class="payroll-issues" id="payrollIssues"></div>
-    <div class="payroll-actions">
-      <button class="payroll-btn submit"  onclick="submitWeekForApproval()">Submit</button>
-      <button class="payroll-btn approve" onclick="approveWeek()">Approve</button>
-      <button class="payroll-btn lock"    onclick="lockWeek()">Paid ✓</button>
-    </div>
-  </div>
-
   <!-- Day rows -->
   <div class="section-wrap">
     <div class="section-label">This Week</div>
     <div class="day-list" id="dayList"></div>
+    <!-- Week Status Actions -->
+    <div class="week-status-actions">
+      <button class="payroll-btn submit"  onclick="submitWeekForApproval()">Submit</button>
+      <button class="payroll-btn approve" onclick="approveWeek()">Approve</button>
+      <button class="payroll-btn lock"    onclick="lockWeek()">Paid ✓</button>
+    </div>
   </div>
 </div>
 

@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f9f9fe" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1117" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Hours">
+<title>Hours Tracker</title>
+
+<!-- Inter font + Material Symbols -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+/* ═══════════════════════════════════════
+   DESIGN 2 — CHRONOS IVORY / LEDGER
+   ═══════════════════════════════════════ */
+:root {
+  /* Core palette */
+  --bg:       #f9f9fe;
+  --card:     #ffffff;
+  --blue:     #0058bc;
+  --blue-2:   #0070eb;
+  --green:    #16a34a;
+  --red:      #ba1a1a;
+  --label:    #1a1c1f;
+  --secondary:#414755;
+  --tertiary: #717786;
+  --outline:  #c1c6d7;
+  --fill:     #f3f3f8;
+  --fill-hi:  #e8e8ed;
+  --row-press:#ededf2;
+  --nav-bg:   rgba(249,249,254,0.82);
+  --tab-bg:   rgba(255,255,255,0.78);
+  --radius:   16px;
+  --font:     'Inter', -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  --separator: rgba(193,198,215,0.35);
+  /* Semantic status */
+  --green-bg: rgba(22,163,74,0.1);
+  --red-bg:   rgba(186,26,26,0.1);
+  --amber-bg: rgba(180,83,9,0.1);
+  --amber:    #b45309;
+  --blue-bg:  rgba(0,88,188,0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:       #0f1117;
+    --card:     #1c1e26;
+    --blue:     #5b9cf6;
+    --blue-2:   #3b82f6;
+    --green:    #4ade80;
+    --red:      #f87171;
+    --label:    #e8eaf2;
+    --secondary:#a8b0c8;
+    --tertiary: #6b7280;
+    --outline:  #2e3248;
+    --fill:     #252836;
+    --fill-hi:  #1e2130;
+    --row-press:#252838;
+    --nav-bg:   rgba(15,17,23,0.88);
+    --tab-bg:   rgba(28,30,38,0.85);
+    --separator: rgba(46,50,72,0.6);
+    --green-bg: rgba(74,222,128,0.12);
+    --red-bg:   rgba(248,113,113,0.12);
+    --amber-bg: rgba(251,191,36,0.1);
+    --amber:    #fbbf24;
+    --blue-bg:  rgba(91,156,246,0.12);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:       #0f1117;
+  --card:     #1c1e26;
+  --blue:     #5b9cf6;
+  --blue-2:   #3b82f6;
+  --green:    #4ade80;
+  --red:      #f87171;
+  --label:    #e8eaf2;
+  --secondary:#a8b0c8;
+  --tertiary: #6b7280;
+  --outline:  #2e3248;
+  --fill:     #252836;
+  --fill-hi:  #1e2130;
+  --row-press:#252838;
+  --nav-bg:   rgba(15,17,23,0.88);
+  --tab-bg:   rgba(28,30,38,0.85);
+  --separator: rgba(46,50,72,0.6);
+  --green-bg: rgba(74,222,128,0.12);
+  --red-bg:   rgba(248,113,113,0.12);
+  --amber-bg: rgba(251,191,36,0.1);
+  --amber:    #fbbf24;
+  --blue-bg:  rgba(91,156,246,0.12);
+}
+:root[data-theme="light"] {
+  --bg:       #f9f9fe;
+  --card:     #ffffff;
+  --blue:     #0058bc;
+  --blue-2:   #0070eb;
+  --green:    #16a34a;
+  --red:      #ba1a1a;
+  --label:    #1a1c1f;
+  --secondary:#414755;
+  --tertiary: #717786;
+  --outline:  #c1c6d7;
+  --fill:     #f3f3f8;
+  --fill-hi:  #e8e8ed;
+  --row-press:#ededf2;
+  --nav-bg:   rgba(249,249,254,0.82);
+  --tab-bg:   rgba(255,255,255,0.78);
+  --separator: rgba(193,198,215,0.35);
+  --green-bg: rgba(22,163,74,0.1);
+  --red-bg:   rgba(186,26,26,0.1);
+  --amber-bg: rgba(180,83,9,0.1);
+  --amber:    #b45309;
+  --blue-bg:  rgba(0,88,188,0.1);
+}
+
+/* ── Material Symbols ── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* ── Body ── */
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--label);
+  min-height: 100vh;
+  max-width: 430px;
+  margin: 0 auto;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+
+/* ── Pages ── */
+.page { 
+  display: none; 
+  padding-bottom: 110px; 
+  min-height: 100vh; 
+}
+.page.active {
+  display: block;
+  animation: pageFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pageFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ═══════════════════════════════════════
+   NAV BAR  — "Ledger" editorial header
+   ═══════════════════════════════════════ */
+.nav-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: calc(env(safe-area-inset-top, 20px) + 14px) 20px 14px;
+  background: var(--nav-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid var(--separator);
+}
+.nav-ledger-title {
+  font-size: 2.4rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--blue);
+  line-height: 1;
+}
+.nav-live-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--green-bg); color: var(--green);
+  border: 1px solid rgba(22,163,74,0.2);
+  border-radius: 999px; padding: 4px 10px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+}
+.nav-live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green);
+  animation: live-pulse 2s ease-in-out infinite;
+}
+@keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.nav-actions { display: flex; align-items: center; gap: 8px; }
+.nav-icon-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer;
+  color: var(--secondary); font-size: 22px;
+  transition: background 0.15s;
+}
+.nav-icon-btn:active { background: var(--fill); }
+.nav-btn {
+  font-size: 14px; color: var(--blue); background: none; border: none;
+  cursor: pointer; font-family: var(--font); padding: 6px 4px;
+  font-weight: 600; min-width: 56px;
+}
+/* Simple title for clock/settings pages */
+.nav-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; color: var(--label); }
+
+/* ═══════════════════════════════════════
+   TAB BAR — Floating glassmorphic pill
+   ═══════════════════════════════════════ */
+.tab-bar {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  left: 50%; transform: translateX(-50%);
+  width: calc(100% - 32px); max-width: 398px;
+  background: var(--tab-bg);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-radius: 2rem;
+  box-shadow: 0 10px 40px rgba(0,88,188,0.18), 0 0 0 1px var(--separator);
+  display: flex; justify-content: space-around; align-items: center;
+  height: 72px; padding: 0 8px;
+  z-index: 100;
+  touch-action: none; /* Prevent scrolling when dragging */
+}
+.tab-slider {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 8px;
+  width: calc((100% - 16px) / 4);
+  background: var(--blue);
+  border-radius: 999px;
+  z-index: -1;
+  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
+  box-shadow: 0 6px 20px rgba(0,88,188,0.45);
+}
+.tab-slider.dragging {
+  transition: none;
+  box-shadow: 0 8px 24px rgba(0,88,188,0.55);
+}
+.tab-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 3px;
+  cursor: pointer; border: none; background: none; font-family: var(--font);
+  border-radius: 999px; height: 56px;
+  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), background 0.15s;
+  color: var(--tertiary);
+}
+.tab-btn.active {
+  color: #fff;
+  transform: scale(1.05);
+}
+.tab-icon { font-size: 22px; line-height: 1; }
+.tab-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.tab-btn.active .tab-label { color: #fff; }
+
+/* ═══════════════════════════════════════
+   WEEK NAV (inline)
+   ═══════════════════════════════════════ */
+.week-nav-wrap { padding: 16px 20px 8px; }
+.week-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 0;
+}
+.wk-arrow {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--fill);
+  border: none; cursor: pointer; font-size: 22px; color: var(--blue);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s, background 0.1s;
+}
+.wk-arrow:active { background: var(--fill-hi); transform: scale(0.9); }
+.wk-label { text-align: center; flex: 1; }
+.wk-dates { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: var(--label); }
+.wk-year  { font-size: 12px; color: var(--tertiary); margin-top: 2px; font-weight: 500; }
+.week-swipe-hint {
+  text-align: center; font-size: 10px; color: var(--tertiary);
+  padding: 4px 0 2px; letter-spacing: 0.2px; opacity: 0.7; font-weight: 500;
+}
+
+/* ── Floating sticky week nav ── */
+.float-week-nav {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 20px) + 72px);
+  left: 50%; transform: translateX(-50%) translateY(-10px);
+  width: calc(100% - 32px); max-width: 398px;
+  background: var(--card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 999px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12), 0 0 0 1px var(--separator);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 8px;
+  z-index: 49;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+}
+.float-week-nav.visible {
+  opacity: 1; pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+.float-week-nav .wk-arrow { width: 30px; height: 30px; font-size: 18px; }
+.float-wk-label { text-align: center; flex: 1; }
+.float-wk-dates { font-size: 14px; font-weight: 700; letter-spacing: -0.02em; }
+.float-wk-year  { font-size: 10px; color: var(--tertiary); margin-top: 1px; }
+
+/* ═══════════════════════════════════════
+   HERO EARNINGS BANNER (gradient card)
+   ═══════════════════════════════════════ */
+.total-banner {
+  margin: 0 20px 16px;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-2) 100%);
+  border-radius: var(--radius);
+  padding: 24px 22px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  box-shadow: 0 8px 32px rgba(0,88,188,0.32);
+  overflow: hidden;
+  position: relative;
+}
+.total-banner::before {
+  content: '';
+  position: absolute; top: -40px; right: -40px;
+  width: 140px; height: 140px;
+  background: rgba(255,255,255,0.08); border-radius: 50%; blur: 20px;
+}
+.total-banner::after {
+  content: '';
+  position: absolute; bottom: -60px; left: -40px;
+  width: 180px; height: 180px;
+  background: rgba(91,156,246,0.15); border-radius: 50%;
+}
+.banner-lbl { font-size: 10px; color: rgba(255,255,255,0.72); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+.banner-val {
+  font-size: 2.4rem; font-weight: 900; color: #fff; letter-spacing: -0.04em; line-height: 1;
+  display: flex; align-items: baseline; gap: 3px;
+}
+.banner-val-sym { font-size: 1.3rem; font-weight: 600; opacity: 0.7; }
+.banner-sub { font-size: 12px; color: rgba(255,255,255,0.68); margin-top: 8px; font-weight: 500; }
+.banner-trend {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 13px; font-weight: 700; color: #fff;
+  position: relative; z-index: 1;
+}
+
+/* ═══════════════════════════════════════
+   PAYROLL CARD
+   ═══════════════════════════════════════ */
+.payroll-card {
+  margin: 0 20px 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+  overflow: hidden;
+  border: 1px solid var(--separator);
+}
+.payroll-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px 10px;
+}
+.payroll-title { font-size: 15px; font-weight: 700; color: var(--label); }
+.payroll-sub   { font-size: 11px; color: var(--tertiary); margin-top: 2px; }
+.payroll-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 8px; padding: 0 18px 12px;
+}
+.payroll-stat { background: var(--fill); border-radius: 10px; padding: 10px 8px; text-align: center; }
+.payroll-stat-val { font-size: 18px; font-weight: 800; color: var(--label); }
+.payroll-stat-lbl { font-size: 10px; color: var(--tertiary); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
+.payroll-issues { padding: 0 18px 12px; display: flex; flex-direction: column; gap: 8px; }
+.payroll-issue { background: var(--amber-bg); color: var(--amber); border-radius: 10px; padding: 10px 12px; font-size: 13px; font-weight: 500; }
+.payroll-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 18px 16px; }
+.payroll-btn { border: none; border-radius: 10px; padding: 12px 8px; font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; }
+.payroll-btn.submit  { background: var(--blue-bg); color: var(--blue); }
+.payroll-btn.approve { background: var(--green-bg); color: var(--green); }
+.payroll-btn.lock    { background: var(--red-bg); color: var(--red); }
+.review-link { border: none; background: none; color: var(--blue); font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font); }
+
+/* ═══════════════════════════════════════
+   DAY LIST & ROWS
+   ═══════════════════════════════════════ */
+.section-wrap  { margin: 0 20px 20px; }
+.section-label {
+  font-size: 11px; font-weight: 700; color: var(--tertiary);
+  text-transform: uppercase; letter-spacing: 0.08em; padding: 0 2px 10px;
+}
+.day-list { display: flex; flex-direction: column; gap: 10px; }
+
+.day-row {
+  display: flex; align-items: center; padding: 16px 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--separator);
+  cursor: pointer; gap: 14px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+.day-row:active { transform: scale(0.985); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+
+.day-circle {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--fill);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: transform 0.15s;
+}
+.day-row:hover .day-circle { transform: scale(1.05); }
+.day-circle.has-data { background: var(--blue-bg); }
+.day-circle.is-today  { background: var(--blue); }
+
+.dc-name { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--tertiary); letter-spacing: 0.3px; }
+.day-circle.has-data .dc-name { color: var(--blue); }
+.day-circle.is-today  .dc-name { color: rgba(255,255,255,0.8); }
+.dc-num  { font-size: 16px; font-weight: 800; color: var(--label); line-height: 1.1; }
+.day-circle.has-data .dc-num { color: var(--blue); }
+.day-circle.is-today  .dc-num { color: #fff; }
+
+.day-mid { flex: 1; min-width: 0; }
+.day-row-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3px; gap: 6px; }
+.day-time-str { font-size: 15px; font-weight: 600; color: var(--label); }
+.day-time-str.empty { color: var(--tertiary); font-weight: 400; font-size: 14px; }
+.day-sub { font-size: 11px; color: var(--tertiary); margin-top: 3px; font-weight: 500; }
+
+.day-status-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.07em; border-radius: 999px; padding: 3px 8px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.day-status-pill.open      { background: var(--amber-bg); color: var(--amber); }
+.day-status-pill.submitted { background: var(--blue-bg); color: var(--blue); }
+.day-status-pill.approved  { background: var(--green-bg); color: var(--green); }
+.day-status-pill.locked    { background: var(--red-bg); color: var(--red); }
+
+.day-right { text-align: right; flex-shrink: 0; }
+.day-hrs {
+  font-size: 1.2rem; font-weight: 900; letter-spacing: -0.04em;
+  color: var(--blue); display: flex; align-items: baseline; justify-content: flex-end; gap: 2px;
+}
+.day-hrs-sym { font-size: 0.8rem; font-weight: 600; opacity: 0.6; }
+.day-hrs.zero { color: var(--tertiary); font-weight: 400; font-size: 15px; }
+.day-earn { font-size: 11px; font-weight: 600; color: var(--tertiary); margin-top: 2px; }
+.day-chev { color: var(--outline); font-size: 16px; margin-left: 2px; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════
+   CLOCK PAGE
+   ═══════════════════════════════════════ */
+.clock-page { padding: 0 20px; }
+
+.clock-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  margin-top: 16px;
+  padding: 32px 24px 24px;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+  border: 1px solid var(--separator);
+  text-align: center;
+}
+.clock-status-row {
+  display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px;
+}
+.c-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--fill-hi); flex-shrink: 0;
+  position: relative;
+}
+.c-dot.on { background: var(--green); }
+.c-dot.on::before {
+  content: '';
+  position: absolute; inset: -4px; border-radius: 50%;
+  background: var(--green); opacity: 0.3;
+  animation: ring-pulse 2s ease-in-out infinite;
+}
+@keyframes ring-pulse { 0%,100%{transform:scale(1);opacity:0.3} 50%{transform:scale(1.5);opacity:0} }
+.c-status { font-size: 13px; color: var(--tertiary); font-weight: 600; letter-spacing: 0.01em; }
+.c-status.on { color: var(--green); }
+
+.c-big-time {
+  font-size: 4.5rem;
+  font-weight: 200;
+  letter-spacing: -0.05em;
+  color: var(--label);
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.c-big-time .c-secs {
+  color: var(--blue);
+  opacity: 0.9;
+  font-size: 3.5rem;
+}
+.c-session-lbl { font-size: 13px; color: var(--tertiary); margin-bottom: 28px; font-weight: 500; }
+
+/* Clock In / Out button */
+.c-main-btn {
+  width: 100%; padding: 18px;
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  color: #fff; border: none; border-radius: 14px;
+  font-size: 17px; font-weight: 700;
+  font-family: var(--font); cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  margin-bottom: 14px;
+  box-shadow: 0 6px 20px rgba(22,163,74,0.3);
+  letter-spacing: 0.01em;
+}
+.c-main-btn:active { opacity: 0.88; transform: scale(0.98); }
+.c-main-btn.out {
+  background: linear-gradient(135deg, #ba1a1a, #dc2626);
+  box-shadow: 0 6px 20px rgba(186,26,26,0.3);
+}
+
+.c-info-row {
+  display: flex; justify-content: space-between;
+  background: var(--fill); border-radius: 12px; padding: 14px 16px; margin-top: 4px;
+}
+.ci-block { text-align: center; }
+.ci-lbl { font-size: 10px; color: var(--tertiary); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700; margin-bottom: 5px; }
+.ci-val { font-size: 15px; font-weight: 700; color: var(--label); }
+.ci-val.green { color: var(--green); }
+.ci-val.blue  { color: var(--blue); }
+
+/* Today card */
+.today-card {
+  background: var(--card); border-radius: var(--radius); margin-top: 14px;
+  overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  border: 1px solid var(--separator);
+}
+.tc-header {
+  padding: 12px 18px; border-bottom: 1px solid var(--separator);
+  font-size: 10px; font-weight: 700; color: var(--tertiary);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.tc-row {
+  display: flex; justify-content: space-between; padding: 13px 18px;
+  border-bottom: 1px solid var(--separator); font-size: 15px;
+}
+.tc-row:last-child { border-bottom: none; }
+.tc-lbl { color: var(--secondary); font-weight: 500; }
+.tc-val { font-weight: 700; }
+.tc-val.blue { color: var(--blue); }
+
+/* ═══════════════════════════════════════
+   CALENDAR PAGE
+   ═══════════════════════════════════════ */
+.cal-page { padding: 0 20px; }
+
+.cal-nav-wrap { padding: 16px 0 10px; }
+.cal-nav {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.cal-month-lbl {
+  text-align: left; background: none; border: none;
+  font-family: var(--font); cursor: pointer; padding: 2px 0; flex: 1;
+}
+.cal-month-name {
+  font-size: 2rem; font-weight: 800; color: var(--label); letter-spacing: -0.04em; line-height: 1;
+}
+.cal-month-year {
+  font-size: 11px; color: var(--tertiary); margin-top: 3px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.cal-month-chev { font-size: 14px; color: var(--tertiary); margin-left: 4px; }
+.cal-nav-arrows { display: flex; gap: 6px; }
+
+.cal-summary {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-2) 100%);
+  border-radius: var(--radius); padding: 20px 22px; margin-bottom: 14px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  box-shadow: 0 6px 24px rgba(0,88,188,0.28); position: relative; overflow: hidden;
+}
+.cal-sum-lbl { font-size: 10px; color: rgba(255,255,255,0.72); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 5px; }
+.cal-sum-val { font-size: 1.8rem; font-weight: 900; color: #fff; letter-spacing: -0.04em; }
+.cal-sum-sub { font-size: 11px; color: rgba(255,255,255,0.68); margin-top: 4px; font-weight: 500; }
+
+.cal-grid-wrap {
+  background: var(--fill); border-radius: var(--radius);
+  padding: 16px 12px; margin-bottom: 20px;
+}
+.cal-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 8px; }
+.cal-dow {
+  text-align: center; font-size: 10px; font-weight: 700;
+  color: var(--tertiary); text-transform: uppercase; letter-spacing: 0.07em; padding: 4px 0;
+}
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-cell {
+  aspect-ratio: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  border-radius: 50%; cursor: pointer; position: relative;
+  background: transparent; border: none; font-family: var(--font);
+  transition: background 0.1s, transform 0.1s;
+}
+.cal-cell:active { transform: scale(0.9); }
+.cal-cell.other-month { opacity: 0.22; }
+.cal-cell.has-data {
+  background: var(--blue);
+  box-shadow: 0 2px 8px rgba(0,88,188,0.28);
+}
+.cal-cell.is-today { background: var(--blue); }
+.cal-cell.is-today.has-data { background: var(--blue); box-shadow: 0 4px 14px rgba(0,88,188,0.4); }
+.cal-num { font-size: 14px; font-weight: 700; color: var(--label); line-height: 1; }
+.cal-cell.has-data .cal-num { color: #fff; }
+.cal-cell.is-today .cal-num { color: #fff; }
+.cal-hrs {
+  font-size: 8px; font-weight: 700; color: rgba(255,255,255,0.85);
+  margin-top: 2px; font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════════════════════════
+   SETTINGS PAGE
+   ═══════════════════════════════════════ */
+.settings-page { padding: 0 20px; }
+
+/* Profile hero */
+.settings-profile {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; padding: 28px 20px 24px; gap: 14px;
+}
+.settings-avatar-wrap { position: relative; display: inline-block; }
+.settings-avatar {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-2) 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; color: #fff; font-weight: 800;
+  box-shadow: 0 4px 16px rgba(0,88,188,0.3);
+  border: 3px solid var(--card);
+}
+.settings-avatar-online {
+  position: absolute; bottom: 2px; right: 2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--green); border: 2.5px solid var(--card);
+}
+.settings-name { font-size: 1.5rem; font-weight: 800; color: var(--label); letter-spacing: -0.02em; }
+.settings-subtitle { font-size: 13px; color: var(--tertiary); font-weight: 500; }
+
+/* Settings groups */
+.settings-group { margin-bottom: 28px; }
+.sg-label {
+  font-size: 10px; font-weight: 700; color: var(--tertiary);
+  text-transform: uppercase; letter-spacing: 0.1em; padding: 0 4px 8px;
+}
+.settings-card {
+  background: var(--card); border-radius: var(--radius); overflow: hidden;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05); border: 1px solid var(--separator);
+}
+.s-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--separator); min-height: 52px; gap: 12px;
+}
+.s-row:last-child { border-bottom: none; }
+.s-row.tap { cursor: pointer; }
+.s-row.tap:active { background: var(--fill); }
+.s-row-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 18px;
+}
+.s-row-icon.blue   { background: rgba(0,88,188,0.1);  color: var(--blue); }
+.s-row-icon.green  { background: rgba(22,163,74,0.1);  color: var(--green); }
+.s-row-icon.orange { background: rgba(234,88,12,0.1);  color: #ea580c; }
+.s-row-icon.slate  { background: var(--fill);           color: var(--secondary); }
+.s-row-icon.purple { background: rgba(124,58,237,0.1); color: #7c3aed; }
+.s-row-icon.rose   { background: rgba(225,29,72,0.1);  color: #e11d48; }
+.s-row-icon.amber  { background: rgba(180,83,9,0.1);   color: var(--amber); }
+.s-row-icon.red    { background: var(--red-bg);         color: var(--red); }
+.s-lbl { font-size: 15px; font-weight: 500; flex: 1; }
+.s-val { display: flex; align-items: center; gap: 6px; }
+.s-input {
+  border: none; outline: none; font-family: var(--font); font-size: 15px;
+  color: var(--blue); text-align: right; background: transparent; width: 90px; font-weight: 600;
+}
+.s-sym { font-size: 15px; color: var(--blue); font-weight: 600; }
+.s-select {
+  border: none; outline: none; font-family: var(--font); font-size: 15px;
+  color: var(--blue); background: transparent; font-weight: 600;
+}
+.s-chev { color: var(--outline); font-size: 16px; }
+.s-chev-expand { color: var(--outline); font-size: 18px; transition: transform 0.25s ease; }
+.s-row.expanded .s-chev-expand { transform: rotate(90deg); }
+
+/* Collapsible sub-menu inside settings cards */
+.s-submenu {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+  opacity: 0;
+}
+.s-submenu.open { max-height: 400px; opacity: 1; }
+.s-subrow {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 16px 13px 52px;
+  border-bottom: 1px solid var(--separator);
+  background: var(--fill); cursor: pointer; min-height: 48px;
+}
+.s-subrow:last-child { border-bottom: none; }
+.s-subrow:active { opacity: 0.65; }
+.s-subrow-icon {
+  width: 26px; height: 26px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.s-subrow-icon.blue  { background: rgba(0,88,188,0.1);  color: var(--blue); }
+.s-subrow-icon.slate { background: var(--separator);     color: var(--secondary); }
+.s-subrow-lbl { font-size: 14px; font-weight: 500; flex: 1; color: var(--label); }
+.s-subrow-chev { color: var(--outline); font-size: 16px; }
+
+/* Toggle switch */
+.toggle-switch {
+  position: relative; display: inline-block; width: 48px; height: 28px; flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; cursor: pointer; inset: 0;
+  background: var(--fill-hi); border-radius: 28px; transition: background 0.2s;
+}
+.toggle-track::after {
+  content: ''; position: absolute; height: 22px; width: 22px;
+  left: 3px; bottom: 3px; background: white; border-radius: 50%;
+  transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+input:checked + .toggle-track { background: var(--blue); }
+input:checked + .toggle-track::after { transform: translateX(20px); }
+
+/* Schedule rows */
+.sched-day-row { padding: 12px 16px; border-bottom: 1px solid var(--separator); }
+.sched-day-row:last-child { border-bottom: none; }
+
+/* ═══════════════════════════════════════
+   BOTTOM SHEET / OVERLAY
+   ═══════════════════════════════════════ */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.42); z-index: 200;
+  align-items: flex-end; justify-content: center;
+}
+.overlay.open { display: flex; animation: ov-in 0.18s ease; }
+@keyframes ov-in { from{opacity:0} to{opacity:1} }
+
+.sheet {
+  background: var(--card); border-radius: 24px 24px 0 0;
+  width: 100%; max-width: 430px; max-height: 90vh; overflow-y: auto;
+  animation: sh-up 0.28s cubic-bezier(0.32,0.72,0,1); padding-bottom: 40px;
+}
+@keyframes sh-up { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+.sh-handle {
+  width: 36px; height: 4px; background: var(--outline); border-radius: 2px;
+  margin: 10px auto 0;
+}
+.sh-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 20px 12px; border-bottom: 1px solid var(--separator);
+}
+.sh-title { font-size: 17px; font-weight: 700; }
+.sh-btn {
+  font-size: 16px; color: var(--blue); background: none; border: none;
+  cursor: pointer; font-family: var(--font); padding: 4px; min-width: 60px;
+}
+.sh-btn.cancel { text-align: left; font-weight: 400; }
+.sh-btn.save   { text-align: right; font-weight: 700; }
+.sh-sub { text-align: center; padding: 10px 20px 2px; font-size: 14px; color: var(--tertiary); }
+
+.sh-section { padding: 16px 20px 0; }
+.sh-sec-lbl {
+  font-size: 10px; font-weight: 700; color: var(--tertiary);
+  text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; padding: 0 4px;
+}
+.sh-fields { background: var(--fill); border-radius: 12px; overflow: hidden; }
+.sh-field {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--separator); min-height: 52px;
+}
+.sh-field:last-child { border-bottom: none; }
+.sh-field label { font-size: 16px; color: var(--label); flex-shrink: 0; font-weight: 500; }
+.sh-field input[type="time"],
+.sh-field input[type="number"] {
+  border: none; outline: none; font-family: var(--font); font-size: 16px;
+  color: var(--blue); background: transparent; font-weight: 600; text-align: right; flex: 1;
+}
+.sh-field input[type="number"] { width: 60px; }
+.sh-field input[type="text"] {
+  border: none; outline: none; font-family: var(--font); font-size: 15px;
+  color: var(--blue); background: transparent; font-weight: 500; text-align: right; flex: 1;
+}
+.f-unit { font-size: 14px; color: var(--tertiary); margin-left: 4px; }
+
+.sh-result {
+  margin: 14px 0 0; background: var(--blue-bg); border-radius: 12px;
+  padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;
+}
+.sr-lbl { font-size: 15px; color: var(--secondary); font-weight: 500; }
+.sr-right { text-align: right; }
+.sr-val { font-size: 1.6rem; font-weight: 900; color: var(--blue); letter-spacing: -0.04em; }
+.sr-pay { font-size: 13px; font-weight: 700; color: var(--green); margin-top: 2px; }
+
+.sh-remove-wrap { padding: 16px 20px 0; }
+.remove-btn {
+  width: 100%; padding: 14px; background: var(--red-bg); color: var(--red);
+  border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
+  font-family: var(--font); cursor: pointer;
+}
+.remove-btn:active { opacity: 0.7; }
+
+/* ═══════════════════════════════════════
+   PAYROLL REVIEW SHEET
+   ═══════════════════════════════════════ */
+.review-sheet {
+  background: var(--card); border-radius: 24px 24px 0 0;
+  width: 100%; max-width: 430px; max-height: 90vh;
+  overflow-y: auto; animation: sh-up 0.28s cubic-bezier(0.32,0.72,0,1);
+  padding-bottom: 30px;
+}
+.review-list { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
+.review-item { background: var(--fill); border-radius: 12px; padding: 14px 16px; }
+.review-item-title { font-size: 14px; font-weight: 700; color: var(--label); margin-bottom: 6px; }
+.review-item-sub   { font-size: 12px; color: var(--tertiary); }
+
+/* ═══════════════════════════════════════
+   SESSION EDITOR (inside sheet)
+   ═══════════════════════════════════════ */
+.sessions-list { display: flex; flex-direction: column; gap: 12px; }
+.session-card {
+  background: var(--fill); border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--separator);
+}
+.session-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; border-bottom: 1px solid var(--separator);
+}
+.session-title { font-size: 15px; font-weight: 700; }
+.session-total { font-size: 13px; color: var(--blue); font-weight: 700; }
+.session-fields { display: flex; flex-direction: column; }
+.session-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 16px; border-bottom: 1px solid var(--separator);
+}
+.session-row:last-child { border-bottom: none; }
+.session-row label { font-size: 15px; color: var(--label); font-weight: 500; }
+.session-row input[type="time"],
+.session-row input[type="datetime-local"],
+.session-row input[type="number"],
+.session-row select {
+  border: none; outline: none; background: transparent;
+  color: var(--blue); font-family: var(--font); font-size: 16px;
+  text-align: right; font-weight: 600;
+}
+.session-row input[type="number"] { width: 70px; }
+.session-row select { max-width: 180px; }
+.session-tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 190px; }
+.session-tag-opt {
+  border: 1px solid var(--outline); background: transparent; color: var(--secondary);
+  border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+}
+.session-tag-opt.active {
+  border-color: var(--blue); color: var(--blue); background: var(--blue-bg);
+}
+.session-actions { padding: 12px 16px 14px; }
+.session-remove-btn {
+  width: 100%; padding: 11px 12px; border: none; border-radius: 10px;
+  background: var(--red-bg); color: var(--red);
+  font-size: 14px; font-weight: 700; font-family: var(--font); cursor: pointer;
+}
+.add-session-btn {
+  width: 100%; padding: 14px; background: var(--blue-bg); color: var(--blue);
+  border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
+  font-family: var(--font); cursor: pointer;
+}
+.day-note-box { background: var(--fill); border-radius: 12px; overflow: hidden; }
+.day-note-row { padding: 13px 16px; }
+.day-note-input {
+  width: 100%; border: none; outline: none;
+  font-family: var(--font); font-size: 15px;
+  color: var(--blue); background: transparent; font-weight: 500;
+}
+
+/* ═══════════════════════════════════════
+   MONTH PICKER
+   ═══════════════════════════════════════ */
+.mp-sheet {
+  background: var(--card); border-radius: 24px 24px 0 0;
+  width: 100%; max-width: 430px;
+  padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
+  animation: sh-up 0.28s cubic-bezier(0.32,0.72,0,1);
+}
+.mp-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 20px 10px; border-bottom: 1px solid var(--separator);
+}
+.mp-title { font-size: 17px; font-weight: 700; color: var(--label); }
+.mp-cols { display: flex; padding: 12px 16px 4px; gap: 12px; }
+.mp-col {
+  flex: 1; max-height: 280px; overflow-y: auto;
+  background: var(--fill); border-radius: 12px; padding: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+.mp-item {
+  display: block; width: 100%; text-align: center;
+  padding: 10px 8px; background: none; border: none;
+  font-family: var(--font); font-size: 16px; color: var(--label);
+  border-radius: 8px; cursor: pointer; margin-bottom: 2px;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.15s ease;
+}
+.mp-item:active { background: var(--fill-hi); }
+.mp-item.selected {
+  background: var(--blue); color: #fff; font-weight: 700;
+  transform: scale(1.04);
+}
+
+/* ═══════════════════════════════════════
+   iOS ALERT DIALOG
+   ═══════════════════════════════════════ */
+.ios-alert-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 400;
+  align-items: center; justify-content: center;
+  animation: ov-in 0.15s ease;
+}
+.ios-alert-overlay.open { display: flex; }
+.ios-alert {
+  background: var(--card); border-radius: 16px;
+  width: 280px; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: ia-in 0.2s cubic-bezier(0.32,0.72,0,1);
+}
+@keyframes ia-in { from{transform:scale(0.85);opacity:0} to{transform:scale(1);opacity:1} }
+.ia-body { padding: 20px 16px 14px; text-align: center; }
+.ia-title { font-size: 17px; font-weight: 700; color: var(--label); margin-bottom: 5px; }
+.ia-msg { font-size: 13px; color: var(--secondary); line-height: 1.4; }
+.ia-btns { display: flex; border-top: 1px solid var(--separator); }
+.ia-btn {
+  flex: 1; padding: 13px 8px; background: none; border: none;
+  font-family: var(--font); font-size: 17px; color: var(--blue);
+  cursor: pointer; min-height: 48px;
+}
+.ia-btn:active { background: var(--fill); }
+.ia-btn + .ia-btn { border-left: 1px solid var(--separator); }
+.ia-btn.primary { font-weight: 700; }
+.ia-btn.danger  { color: var(--red); font-weight: 700; }
+
+/* ═══════════════════════════════════════
+   CALENDAR RANGE CHIP
+   ═══════════════════════════════════════ */
+.range-chip {
+  background: var(--fill); border: none; border-radius: 99px;
+  padding: 6px 12px; font-family: var(--font); font-size: 12px;
+  font-weight: 600; color: var(--secondary); cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.range-chip:active, .range-chip.active {
+  background: var(--blue); color: #fff;
+}
+
+/* ═══════════════════════════════════════
+   WEEK NAV CARD
+   ═══════════════════════════════════════ */
+.week-nav-card {
+  margin: 0 16px 0;
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--separator);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+.week-nav-card .week-nav {
+  padding: 4px 4px;
+}
+
+/* ═══════════════════════════════════════
+   CLOCK SLIDER
+   ═══════════════════════════════════════ */
+.clock-slider-wrap {
+  position: relative; width: 100%;
+  height: 68px; border-radius: 20px;
+  overflow: hidden; margin-bottom: 14px;
+  user-select: none; -webkit-user-select: none;
+}
+/* in-state = currently clocked IN → slide to clock OUT → RED */
+.clock-slider-wrap.in-state  { background: rgba(186,26,26,0.22);  border: 2px solid rgba(186,26,26,0.5); }
+/* out-state = currently clocked OUT → slide to clock IN → GREEN */
+.clock-slider-wrap.out-state { background: rgba(22,163,74,0.22); border: 2px solid rgba(22,163,74,0.55); }
+
+.clock-slider-label {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  pointer-events: none;
+  font-size: 14px; font-weight: 700; letter-spacing: 0.04em;
+  transition: opacity 0.1s;
+  z-index: 2;
+}
+/* in-state = clocked in → clock out → RED label */
+.clock-slider-wrap.in-state  .clock-slider-label { color: var(--red); }
+/* out-state = clocked out → clock in → GREEN label */
+.clock-slider-wrap.out-state .clock-slider-label { color: var(--green); }
+
+.clock-slider-track-fill {
+  position: absolute; top: 0; left: 0; height: 100%; width: 0%;
+  border-radius: 20px;
+  pointer-events: none; z-index: 1;
+  transition: none;
+  opacity: 0.25;
+}
+.clock-slider-wrap.out-state .clock-slider-track-fill { background: #16a34a; }
+.clock-slider-wrap.in-state  .clock-slider-track-fill { background: #ba1a1a; }
+
+.clock-slider-thumb {
+  position: absolute; top: 50%; transform: translateY(-50%); left: 6px;
+  width: 56px; height: 56px; border-radius: 15px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; color: #fff; cursor: grab;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  transition: left 0.4s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.15s;
+  touch-action: none;
+  z-index: 2;
+}
+.clock-slider-thumb:active { cursor: grabbing; box-shadow: 0 6px 24px rgba(0,0,0,0.25); }
+/* in-state = clocked in → clock out → RED thumb */
+.clock-slider-wrap.in-state  .clock-slider-thumb { background: linear-gradient(135deg,#ba1a1a,#dc2626); }
+/* out-state = clocked out → clock in → GREEN thumb */
+.clock-slider-wrap.out-state .clock-slider-thumb { background: linear-gradient(135deg,#16a34a,#22c55e); }
+
+/* ═══════════════════════════════════════
+   MISC UTILITIES
+   ═══════════════════════════════════════ */
+.section-wrap .day-list { gap: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════
+     TRACKER PAGE
+     ══════════════════════════════════ -->
+<div class="page active" id="page-tracker">
+
+  <!-- Sticky header -->
+  <div class="nav-bar">
+    <div>
+      <div class="nav-ledger-title">Ledger</div>
+    </div>
+    <div class="nav-actions">
+      <div class="nav-live-badge">
+        <span class="nav-live-dot"></span>
+        Live
+      </div>
+      <button class="nav-icon-btn" onclick="exportCSV()" title="Export CSV">
+        <span class="material-symbols-outlined" style="font-size:20px;">file_upload</span>
+      </button>
+      <button class="nav-icon-btn" onclick="printTimesheet()" title="Print">
+        <span class="material-symbols-outlined" style="font-size:20px;">print</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Week nav card -->
+  <div style="height:22px;"></div>
+  <div class="week-nav-card" id="weekNavWrap">
+    <div class="week-nav">
+      <button class="wk-arrow" aria-label="Previous week" onclick="changeWeek(-1)">
+        <span class="material-symbols-outlined" style="font-size:22px;">chevron_left</span>
+      </button>
+      <div class="wk-label" onclick="openWeekJumper()" style="cursor:pointer;position:relative;" title="Tap to jump to a date">
+        <div class="wk-dates" id="wkDates">—</div>
+        <div class="wk-year"  id="wkYear">— <span style="font-size:10px;opacity:0.5;">▾</span></div>
+        <input type="date" id="weekJumpInput" onchange="jumpToDate(this.value)" style="position:absolute;opacity:0;width:1px;height:1px;top:0;left:0;" aria-label="Jump to date">
+      </div>
+      <button class="wk-arrow" aria-label="Next week" onclick="changeWeek(1)">
+        <span class="material-symbols-outlined" style="font-size:22px;">chevron_right</span>
+      </button>
+    </div>
+  </div>
+  <div class="week-swipe-hint" style="margin-top:5px;">Swipe left/right to change week · Tap date to jump</div>
+
+  <!-- Hero earnings banner -->
+  <div class="total-banner">
+    <div style="position:relative;z-index:1;">
+      <div class="banner-lbl">Weekly Earnings</div>
+      <div class="banner-val">
+        <span class="banner-val-sym" id="bannerSym">$</span><span id="totalEarn">—</span>
+      </div>
+      <div class="banner-sub" id="totalHrs">0h 00m</div>
+      <div class="banner-sub" id="avgTxt">Avg — / day</div>
+    </div>
+    <div style="position:relative;z-index:1;">
+      <div class="banner-trend" id="daysLogged">
+        <span class="material-symbols-outlined" style="font-size:16px;">timer</span>
+        0 days
+      </div>
+    </div>
+  </div>
+
+  <!-- Overtime Progress Bar -->
+  <div id="overtimeBarWrap" style="display:none; margin: 0 16px 14px; background:var(--card); border-radius:16px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span style="font-size:13px;font-weight:600;color:var(--secondary);">Weekly Hours</span>
+      <span id="otBarLabel" style="font-size:13px;font-weight:700;color:var(--primary);">0h / 40h</span>
+    </div>
+    <div style="background:var(--fill);border-radius:99px;height:10px;overflow:hidden;">
+      <div id="otBarFill" style="height:100%;border-radius:99px;width:0%;background:linear-gradient(90deg,#16a34a,#22c55e);transition:width 0.5s ease,background 0.3s;"></div>
+    </div>
+    <div id="otBarSub" style="font-size:11px;color:var(--tertiary);margin-top:6px;text-align:right;"></div>
+  </div>
+
+  <!-- Payroll review card -->
+  <div class="payroll-card">
+    <div class="payroll-head">
+      <div>
+        <div class="payroll-title">Payroll Review</div>
+        <div class="payroll-sub" id="payrollReviewSub">Review pay period before payroll</div>
+      </div>
+      <button class="review-link" onclick="openPayrollReviewSheet()">Open →</button>
+    </div>
+    <div class="payroll-stats">
+      <div class="payroll-stat">
+        <div class="payroll-stat-val" id="payrollOpenCount">0</div>
+        <div class="payroll-stat-lbl">Open</div>
+      </div>
+      <div class="payroll-stat">
+        <div class="payroll-stat-val" id="payrollSubmittedCount">0</div>
+        <div class="payroll-stat-lbl">Submitted</div>
+      </div>
+      <div class="payroll-stat">
+        <div class="payroll-stat-val" id="payrollApprovedCount">0</div>
+        <div class="payroll-stat-lbl">Approved</div>
+      </div>
+      <div class="payroll-stat">
+        <div class="payroll-stat-val" id="payrollLockedCount">0</div>
+        <div class="payroll-stat-lbl">Paid</div>
+      </div>
+    </div>
+    <div class="payroll-issues" id="payrollIssues"></div>
+    <div class="payroll-actions">
+      <button class="payroll-btn submit"  onclick="submitWeekForApproval()">Submit</button>
+      <button class="payroll-btn approve" onclick="approveWeek()">Approve</button>
+      <button class="payroll-btn lock"    onclick="lockWeek()">Paid ✓</button>
+    </div>
+  </div>
+
+  <!-- Day rows -->
+  <div class="section-wrap">
+    <div class="section-label">This Week</div>
+    <div class="day-list" id="dayList"></div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════
+     CALENDAR PAGE
+     ══════════════════════════════════ -->
+<div class="page" id="page-calendar">
+  <div class="nav-bar">
+    <div>
+      <div class="nav-ledger-title">Ledger</div>
+    </div>
+    <div class="nav-actions">
+      <button class="nav-icon-btn" onclick="exportMonthCSV()" title="Export Month">
+        <span class="material-symbols-outlined" style="font-size:20px;">file_upload</span>
+      </button>
+      <button class="nav-icon-btn" id="calRangeToggleBtn" onclick="toggleCalendarRangeMode()" title="Custom Date Range">
+        <span class="material-symbols-outlined" style="font-size:20px;">date_range</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="cal-page">
+    <!-- Month nav (hidden in range mode) -->
+    <div class="cal-nav-wrap" id="calMonthNavWrap">
+      <div class="cal-nav">
+        <button class="cal-month-lbl" onclick="openMonthPicker()" aria-label="Jump to month">
+          <div class="cal-month-name" id="calMonthName">— <span class="cal-month-chev">▾</span></div>
+          <div class="cal-month-year" id="calMonthYear">—</div>
+        </button>
+        <div class="cal-nav-arrows">
+          <button class="wk-arrow" aria-label="Previous month" onclick="changeMonth(-1)">
+            <span class="material-symbols-outlined" style="font-size:22px;">chevron_left</span>
+          </button>
+          <button class="wk-arrow" aria-label="Next month" onclick="changeMonth(1)">
+            <span class="material-symbols-outlined" style="font-size:22px;">chevron_right</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Date Range Panel (hidden by default) -->
+    <div id="calRangePanel" style="display:none; padding:12px 16px 4px;">
+      <div style="background:var(--card);border-radius:16px;padding:16px;border:1px solid var(--separator);">
+        <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.4px;">Custom Date Range</div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <div style="flex:1;">
+            <div style="font-size:11px;color:var(--tertiary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">From</div>
+            <input type="date" id="rangeFromInput" onchange="calcDateRange()" style="width:100%;padding:10px 12px;border:1.5px solid var(--separator);border-radius:10px;font-family:var(--font);font-size:15px;font-weight:500;color:var(--blue);background:var(--bg);outline:none;">
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:11px;color:var(--tertiary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">To</div>
+            <input type="date" id="rangeToInput" onchange="calcDateRange()" style="width:100%;padding:10px 12px;border:1.5px solid var(--separator);border-radius:10px;font-family:var(--font);font-size:15px;font-weight:500;color:var(--blue);background:var(--bg);outline:none;">
+          </div>
+        </div>
+        <!-- Quick preset chips -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+          <button onclick="setRangePreset('last7')"  class="range-chip">Last 7 days</button>
+          <button onclick="setRangePreset('last30')" class="range-chip">Last 30 days</button>
+          <button onclick="setRangePreset('thisMonth')" class="range-chip">This month</button>
+          <button onclick="setRangePreset('lastMonth')" class="range-chip">Last month</button>
+          <button onclick="setRangePreset('last3months')" class="range-chip">Last 3 months</button>
+          <button onclick="setRangePreset('thisYear')" class="range-chip">This year</button>
+        </div>
+        <!-- Range result summary -->
+        <div id="rangeResult" style="display:none;background:var(--fill);border-radius:12px;padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span style="font-size:13px;font-weight:600;color:var(--secondary);" id="rangeResultLabel">—</span>
+            <span style="font-size:12px;color:var(--tertiary);" id="rangeResultDays">—</span>
+          </div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1;background:var(--card);border-radius:10px;padding:10px 12px;">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--tertiary);font-weight:600;">Total Hours</div>
+              <div style="font-size:20px;font-weight:800;color:var(--label);margin-top:2px;" id="rangeResultHrs">—</div>
+              <div style="font-size:11px;color:var(--tertiary);" id="rangeResultDaysWorked">—</div>
+            </div>
+            <div style="flex:1;background:var(--card);border-radius:10px;padding:10px 12px;">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--tertiary);font-weight:600;">Earnings</div>
+              <div style="font-size:20px;font-weight:800;color:#16a34a;margin-top:2px;" id="rangeResultEarn">—</div>
+              <div style="font-size:11px;color:var(--tertiary);" id="rangeResultAvg">—</div>
+            </div>
+          </div>
+        </div>
+        <div id="rangeEmpty" style="display:none;text-align:center;color:var(--tertiary);font-size:13px;padding:8px 0;">No hours logged in this range</div>
+      </div>
+    </div>
+
+    <!-- Monthly summary (hidden in range mode) -->
+    <div class="cal-summary" id="calMonthlySummary">
+      <div style="position:relative;z-index:1;">
+        <div class="cal-sum-lbl">Total this month</div>
+        <div class="cal-sum-val" id="calTotalHrs">0h 00m</div>
+        <div class="cal-sum-sub" id="calDaysLogged">0 days logged</div>
+      </div>
+      <div style="text-align:right;position:relative;z-index:1;">
+        <div class="cal-sum-lbl">Earnings</div>
+        <div class="cal-sum-val" id="calTotalEarn">—</div>
+        <div class="cal-sum-sub" id="calAvgTxt">Avg — / day</div>
+      </div>
+    </div>
+
+    <!-- Calendar grid (hidden in range mode) -->
+    <div class="cal-grid-wrap" id="calGridWrap">
+      <div class="cal-dow-row" id="calDowRow"></div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════
+     CLOCK PAGE
+     ══════════════════════════════════ -->
+<div class="page" id="page-clock">
+  <div class="nav-bar" style="justify-content:center;">
+    <span class="nav-title">Clock In / Out</span>
+  </div>
+
+  <div class="clock-page">
+    <div class="clock-card">
+      <!-- Status row -->
+      <div class="clock-status-row">
+        <div class="c-dot" id="cDot"></div>
+        <span class="c-status" id="cStatus">Not clocked in</span>
+      </div>
+
+      <!-- Big timer -->
+      <div class="c-big-time" id="cTimer">00:00<span class="c-secs">:00</span></div>
+      <div class="c-session-lbl" id="cLbl">Press Clock In to start</div>
+
+      <!-- Clock In/Out drag slider -->
+      <div class="clock-slider-wrap out-state" id="cSliderWrap" style="margin-top:20px;">
+        <div class="clock-slider-track-fill" id="cSliderFill"></div>
+        <div class="clock-slider-label" id="cSliderLabel">
+          <span class="material-symbols-outlined" style="font-size:20px;">swipe_right</span>
+          SLIDE TO CLOCK IN
+        </div>
+        <div class="clock-slider-thumb" id="cSliderThumb">
+          <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1;" id="cSliderIcon">play_arrow</span>
+        </div>
+      </div>
+      <!-- Accessible hidden button (keeps toggleClock() hookable) -->
+      <button id="cBtn" onclick="toggleClock()" style="display:none;" aria-hidden="true"></button>
+
+      <!-- Break Button (only visible when clocked in) -->
+      <div id="breakBtnWrap" style="display:none;margin-top:10px;">
+        <button id="breakBtn" onclick="toggleBreak()" style="width:100%;padding:14px;border-radius:16px;border:none;font-family:var(--font);font-size:14px;font-weight:700;letter-spacing:0.04em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(234,179,8,0.12);color:#ca8a04;transition:background 0.2s;">
+          <span class="material-symbols-outlined" style="font-size:20px;" id="breakBtnIcon">pause_circle</span>
+          <span id="breakBtnLabel">START BREAK</span>
+        </button>
+        <div id="breakTimerLbl" style="text-align:center;font-size:12px;color:var(--tertiary);margin-top:6px;display:none;">Break in progress: <span id="breakTimerVal">0:00</span></div>
+      </div>
+
+      <!-- Info row -->
+      <div class="c-info-row">
+        <div class="ci-block">
+          <div class="ci-lbl">In Time</div>
+          <div class="ci-val blue" id="ci-in">—</div>
+        </div>
+        <div class="ci-block">
+          <div class="ci-lbl">Duration</div>
+          <div class="ci-val" id="ci-dur">—</div>
+        </div>
+        <div class="ci-block">
+          <div class="ci-lbl">Earnings</div>
+          <div class="ci-val green" id="ci-earn">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today's entry -->
+    <div class="today-card">
+      <div class="tc-header">Today's Entry</div>
+      <div class="tc-row"><span class="tc-lbl">Date</span>        <span class="tc-val" id="td-date">—</span></div>
+      <div class="tc-row"><span class="tc-lbl">Clock In</span>    <span class="tc-val blue" id="td-in">—</span></div>
+      <div class="tc-row"><span class="tc-lbl">Clock Out</span>   <span class="tc-val" id="td-out">—</span></div>
+      <div class="tc-row"><span class="tc-lbl">Hours Worked</span><span class="tc-val" id="td-hrs">—</span></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════
+     SETTINGS PAGE
+     ══════════════════════════════════ -->
+<div class="page" id="page-settings">
+  <div class="nav-bar" style="justify-content:center;">
+    <span class="nav-title">Settings</span>
+  </div>
+
+  <div class="settings-page">
+
+    <!-- Profile hero -->
+    <div class="settings-profile">
+      <div class="settings-avatar-wrap">
+        <div class="settings-avatar">N</div>
+        <div class="settings-avatar-online"></div>
+      </div>
+      <div>
+        <div class="settings-name">Nick</div>
+        <div class="settings-subtitle">Hours Tracker</div>
+      </div>
+    </div>
+
+    <!-- Pay group -->
+    <div class="settings-group">
+      <div class="sg-label">Work Identity</div>
+      <div class="settings-card">
+        <div class="s-row">
+          <div class="s-row-icon blue">
+            <span class="material-symbols-outlined" style="font-size:18px;">payments</span>
+          </div>
+          <span class="s-lbl">Hourly Rate</span>
+          <div class="s-val">
+            <span class="s-sym" id="rateSym">$</span>
+            <input class="s-input" type="number" id="rateInput" value="0.00" step="0.50" min="0" onchange="saveRate()">
+          </div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-icon green">
+            <span class="material-symbols-outlined" style="font-size:18px;">currency_exchange</span>
+          </div>
+          <span class="s-lbl">Currency</span>
+          <div class="s-val">
+            <select class="s-select" id="currencySelect" onchange="saveCurrency()">
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="INR">INR (₹)</option>
+            </select>
+          </div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-icon orange">
+            <span class="material-symbols-outlined" style="font-size:18px;">calendar_month</span>
+          </div>
+          <span class="s-lbl">Week starts on</span>
+          <div class="s-val">
+            <select class="s-select" id="weekStartSelect" onchange="saveWeekStart()">
+              <option value="monday">Monday</option>
+              <option value="sunday">Sunday</option>
+            </select>
+          </div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-icon" style="background:rgba(234,179,8,0.12);">
+            <span class="material-symbols-outlined" style="font-size:18px;color:#ca8a04;">schedule</span>
+          </div>
+          <span class="s-lbl">Overtime after (hrs/week)</span>
+          <div class="s-val">
+            <input class="s-input" type="number" id="overtimeThresholdInput" value="40" step="1" min="1" max="168" onchange="saveOvertimeThreshold()" style="width:52px;">
+          </div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-icon" style="background:rgba(234,179,8,0.12);">
+            <span class="material-symbols-outlined" style="font-size:18px;color:#ca8a04;">trending_up</span>
+          </div>
+          <span class="s-lbl">Overtime rate (×)</span>
+          <div class="s-val">
+            <input class="s-input" type="number" id="overtimeRateInput" value="1.5" step="0.25" min="1" max="5" onchange="saveOvertimeRate()" style="width:52px;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedule group -->
+    <div class="settings-group">
+      <div class="sg-label">Schedule</div>
+      <div class="settings-card" id="dailyScheduleList"></div>
+    </div>
+
+    <!-- Preferences -->
+    <div class="settings-group">
+      <div class="sg-label">Preferences</div>
+      <div class="settings-card">
+        <div class="s-row">
+          <div class="s-row-icon slate">
+            <span class="material-symbols-outlined" style="font-size:18px;">dark_mode</span>
+          </div>
+          <span class="s-lbl">Dark Theme</span>
+          <div class="s-val">
+            <select class="s-select" id="themeSelect" onchange="saveTheme()">
+              <option value="auto">Auto (System)</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-icon" style="background:rgba(234,179,8,0.12);">
+            <span class="material-symbols-outlined" style="font-size:18px;color:#ca8a04;">trending_up</span>
+          </div>
+          <span class="s-lbl">Show Overtime Indicator</span>
+          <div class="s-val">
+            <label style="position:relative;display:inline-block;width:51px;height:31px;">
+              <input type="checkbox" id="overtimeBarToggle" onchange="saveOvertimeBarPref(this.checked)" style="opacity:0;width:0;height:0;">
+              <span id="overtimeBarToggleTrack" style="position:absolute;cursor:pointer;inset:0;background:var(--fill);border-radius:31px;transition:background 0.2s;">
+                <span id="overtimeBarToggleThumb" style="position:absolute;height:27px;width:27px;left:2px;bottom:2px;background:white;border-radius:50%;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Management -->
+    <div class="settings-group">
+      <div class="sg-label">Data Management</div>
+      <div class="settings-card">
+        <!-- Export as CSV (collapsible) -->
+        <div class="s-row tap" id="exportCsvRow" onclick="toggleDataSubmenu('exportCsvMenu','exportCsvRow')">
+          <div class="s-row-icon blue"><span class="material-symbols-outlined" style="font-size:18px;">file_download</span></div>
+          <span class="s-lbl">Export as CSV</span>
+          <span class="material-symbols-outlined s-chev-expand">chevron_right</span>
+        </div>
+        <div class="s-submenu" id="exportCsvMenu">
+          <div class="s-subrow" onclick="exportCSV()">
+            <div class="s-subrow-icon blue"><span class="material-symbols-outlined" style="font-size:15px;">calendar_view_week</span></div>
+            <span class="s-subrow-lbl">Current week</span>
+            <span class="material-symbols-outlined s-subrow-chev">download</span>
+          </div>
+          <div class="s-subrow" onclick="exportMonthCSV()">
+            <div class="s-subrow-icon blue"><span class="material-symbols-outlined" style="font-size:15px;">calendar_month</span></div>
+            <span class="s-subrow-lbl">Current month</span>
+            <span class="material-symbols-outlined s-subrow-chev">download</span>
+          </div>
+          <div class="s-subrow" onclick="exportCustomRangeCSV()">
+            <div class="s-subrow-icon slate"><span class="material-symbols-outlined" style="font-size:15px;">date_range</span></div>
+            <span class="s-subrow-lbl">Custom date range</span>
+            <span class="material-symbols-outlined s-subrow-chev">download</span>
+          </div>
+        </div>
+
+        <!-- Print Timesheet (collapsible) -->
+        <div class="s-row tap" id="printSheetRow" onclick="toggleDataSubmenu('printSheetMenu','printSheetRow')">
+          <div class="s-row-icon slate"><span class="material-symbols-outlined" style="font-size:18px;">print</span></div>
+          <span class="s-lbl">Print Timesheet</span>
+          <span class="material-symbols-outlined s-chev-expand">chevron_right</span>
+        </div>
+        <div class="s-submenu" id="printSheetMenu">
+          <div class="s-subrow" onclick="printTimesheet()">
+            <div class="s-subrow-icon slate"><span class="material-symbols-outlined" style="font-size:15px;">calendar_view_week</span></div>
+            <span class="s-subrow-lbl">Week</span>
+            <span class="material-symbols-outlined s-subrow-chev">chevron_right</span>
+          </div>
+          <div class="s-subrow" onclick="printMonthTimesheet()">
+            <div class="s-subrow-icon slate"><span class="material-symbols-outlined" style="font-size:15px;">calendar_month</span></div>
+            <span class="s-subrow-lbl">Month</span>
+            <span class="material-symbols-outlined s-subrow-chev">chevron_right</span>
+          </div>
+          <div class="s-subrow" onclick="printCustomTimesheet()">
+            <div class="s-subrow-icon slate"><span class="material-symbols-outlined" style="font-size:15px;">date_range</span></div>
+            <span class="s-subrow-lbl">Custom date range</span>
+            <span class="material-symbols-outlined s-subrow-chev">chevron_right</span>
+          </div>
+        </div>
+
+        <div class="s-row tap" onclick="exportBackup()">
+          <div class="s-row-icon amber"><span class="material-symbols-outlined" style="font-size:18px;">backup</span></div>
+          <span class="s-lbl">Backup all data as JSON</span>
+          <span class="material-symbols-outlined s-chev" style="font-size:18px;color:var(--outline);">download</span>
+        </div>
+        <div class="s-row tap" onclick="document.getElementById('backupFileInput').click()">
+          <div class="s-row-icon amber"><span class="material-symbols-outlined" style="font-size:18px;">restore</span></div>
+          <span class="s-lbl">Restore backup file</span>
+          <span class="material-symbols-outlined s-chev" style="font-size:18px;color:var(--outline);">upload</span>
+        </div>
+        <div class="s-row">
+          <div class="s-row-icon slate"><span class="material-symbols-outlined" style="font-size:18px;">history</span></div>
+          <span class="s-lbl">Last backup</span>
+          <span id="lastBackupText" style="color:var(--tertiary);font-size:14px;font-weight:500;">Never</span>
+        </div>
+        <div class="s-row tap" onclick="clearAll()">
+          <div class="s-row-icon red"><span class="material-symbols-outlined" style="font-size:18px;">delete_forever</span></div>
+          <span class="s-lbl" style="color:var(--red);">Clear All Data</span>
+          <span class="material-symbols-outlined" style="font-size:16px;color:var(--red);">warning</span>
+        </div>
+      </div>
+      <input type="file" id="backupFileInput" accept="application/json,.json" style="display:none" onchange="importBackup(event)">
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════
+     FLOATING TAB BAR
+     ══════════════════════════════════ -->
+<div class="tab-bar" id="tabBar" role="tablist" aria-label="Main navigation">
+  <div class="tab-slider" id="tabSlider"></div>
+  <button class="tab-btn active" id="tab-tracker" role="tab" aria-selected="true" onclick="switchTab('tracker')" aria-label="Tracker">
+    <span class="material-symbols-outlined tab-icon">timer</span>
+    <span class="tab-label" id="tl-tracker">Tracker</span>
+  </button>
+  <button class="tab-btn" id="tab-calendar" role="tab" aria-selected="false" onclick="switchTab('calendar')" aria-label="Calendar">
+    <span class="material-symbols-outlined tab-icon">calendar_today</span>
+    <span class="tab-label" id="tl-calendar">Calendar</span>
+  </button>
+  <button class="tab-btn" id="tab-clock" role="tab" aria-selected="false" onclick="switchTab('clock')" aria-label="Clock">
+    <span class="material-symbols-outlined tab-icon">schedule</span>
+    <span class="tab-label" id="tl-clock">Clock</span>
+  </button>
+  <button class="tab-btn" id="tab-settings" role="tab" aria-selected="false" onclick="switchTab('settings')" aria-label="Settings">
+    <span class="material-symbols-outlined tab-icon">settings</span>
+    <span class="tab-label" id="tl-settings">Settings</span>
+  </button>
+</div>
+
+
+<!-- Toast notification -->
+<div id="toastEl" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(30,30,30,0.92);color:#fff;padding:12px 20px;border-radius:99px;font-size:14px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.25s,transform 0.25s;z-index:9999;display:flex;align-items:center;gap:12px;pointer-events:none;">
+  <span id="toastMsg"></span>
+  <button id="toastUndoBtn" onclick="undoLastClock()" style="display:none;background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:99px;cursor:pointer;font-family:var(--font);">UNDO</button>
+</div>
+
+<!-- ══════════════════════════════════
+     DAY ENTRY SHEET
+     ══════════════════════════════════ -->
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+  <div class="sheet" id="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-nav">
+      <button class="sh-btn cancel" onclick="closeSheet()">Cancel</button>
+      <span class="sh-title" id="shTitle">Monday</span>
+      <button class="sh-btn save" onclick="saveEntry()">Save</button>
+    </div>
+    <div class="sh-sub" id="shSub"></div>
+
+    <div class="sh-section">
+      <div class="sh-sec-lbl">Sessions</div>
+      <div id="sessionsList" class="sessions-list"></div>
+      <div style="margin-top:12px;">
+        <button class="add-session-btn" onclick="addSession()">+ Add Session</button>
+      </div>
+      <div class="sh-result">
+        <div class="sr-lbl">Hours Worked</div>
+        <div class="sr-right">
+          <div class="sr-val" id="sr-val">—</div>
+          <div class="sr-pay" id="sr-pay"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sh-section">
+      <div class="sh-sec-lbl">Day Info</div>
+      <div class="day-note-box">
+        <div class="day-note-row" style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--separator);">
+          <label style="font-size:15px;color:var(--label);font-weight:500;">Day Type</label>
+          <select id="f-dayType" style="border:none;outline:none;background:transparent;color:var(--blue);font-family:var(--font);font-size:16px;font-weight:600;text-align:right;">
+            <option value="work">Work Day</option>
+            <option value="absent">Absent</option>
+            <option value="sick">Sick (Unpaid)</option>
+            <option value="holiday">Holiday (Unpaid)</option>
+          </select>
+        </div>
+        <div class="day-note-row">
+          <input type="text" id="f-note" class="day-note-input" placeholder="Optional note for the day">
+        </div>
+      </div>
+    </div>
+
+    <div class="sh-remove-wrap">
+      <button class="remove-btn" onclick="removeEntry()">Remove Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payroll review sheet -->
+<div class="overlay" id="payrollOverlay" role="dialog" aria-modal="true" aria-labelledby="payrollSheetTitle">
+  <div class="review-sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-nav">
+      <button class="sh-btn cancel" onclick="closePayrollReviewSheet()">Close</button>
+      <span class="sh-title" id="payrollSheetTitle">Payroll Review</span>
+      <span style="min-width:60px;"></span>
+    </div>
+    <div class="sh-sub" id="payrollSheetSub">Current pay period details</div>
+    <div class="review-list" id="payrollReviewList"></div>
+  </div>
+</div>
+
+<!-- Floating sticky week nav — direct child of body so position:fixed works against the real viewport -->
+<div class="float-week-nav" id="floatWeekNav" aria-hidden="true">
+  <button class="wk-arrow" aria-label="Previous week" onclick="changeWeek(-1)">
+    <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+  </button>
+  <div class="float-wk-label">
+    <div class="float-wk-dates" id="floatWkDates">—</div>
+    <div class="float-wk-year"  id="floatWkYear">—</div>
+  </div>
+  <button class="wk-arrow" aria-label="Next week" onclick="changeWeek(1)">
+    <span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span>
+  </button>
+</div>
+
+<script src="app.js?v=2"></script>
+</body>
+</html>

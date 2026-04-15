@@ -829,7 +829,8 @@ function getSessionBounds(dayKey, session) {
   let end = null;
   if (session.out) {
     end = parseSessionDateTime(dayKey, session.out, session.outISO);
-    if (start && end && !session.outISO && end < start) {
+    // Overnight shift: if end is on or before start, it must cross midnight
+    if (start && end && end <= start) {
       end = addDays(end, 1);
     }
   }
@@ -958,13 +959,38 @@ function getLastOutForDay(dayKey, filters = {}) {
   return `${p2(last.end.getHours())}:${p2(last.end.getMinutes())}`;
 }
 
-function updateSessionDateTime(session, field, value) {
+function updateSessionDateTime(session, field, value, dayKey = '') {
   const isoField = field + 'ISO';
   if (!value) {
     session[field] = '';
     session[isoField] = '';
     return;
   }
+
+  // Handle time-only input (HH:MM format) combined with dayKey
+  if (value.includes(':') && !value.includes('T') && dayKey) {
+    const [hours, mins] = value.split(':').map(Number);
+    if (!isNaN(hours) && !isNaN(mins)) {
+      const dayStart = dayStartFromKey(dayKey);
+      if (dayStart) {
+        const date = new Date(dayStart);
+        date.setHours(hours, mins, 0, 0);
+        // Overnight shift detection: if setting "out" and end time <= start time, it's next day
+        if (field === 'out' && session.in) {
+          const [inH, inM] = session.in.split(':').map(Number);
+          const inTotalMins = inH * 60 + inM;
+          const outTotalMins = hours * 60 + mins;
+          if (outTotalMins <= inTotalMins) {
+            date.setDate(date.getDate() + 1); // push to next day
+          }
+        }
+        session[field] = `${p2(hours)}:${p2(mins)}`;
+        session[isoField] = date.toISOString();
+        return;
+      }
+    }
+  }
+
   const date = new Date(value);
   if (isNaN(date)) {
     session[field] = '';
@@ -1302,9 +1328,10 @@ function renderWeek() {
         </div>
         <div class="day-mid">
           <div class="day-row-top">
-            <div class="day-time-str" style="color:var(--tertiary);">Hours locked</div>
+            <div class="day-time-str">${hasData ? esc(range.text || '—') : '—'}</div>
             <span class="day-status-pill locked">Paid ✓</span>
           </div>
+          ${subParts.length ? `<div class="day-sub">${subParts.join(' · ')}</div>` : ''}
         </div>
         <div class="day-right">
           <div class="day-hrs ${worked?'':'zero'}">${worked ? `<span class="day-hrs-sym">${curSym()}</span>${(hourlyRate * worked / 60).toFixed(0)}` : '—'}</div>
@@ -1322,7 +1349,7 @@ function renderWeek() {
         </div>
         <div class="day-mid">
           <div class="day-row-top">
-            <div class="day-time-str">${hasData ? esc(range.text || 'Approved') : 'Approved'}</div>
+            <div class="day-time-str">${hasData ? esc(range.text || '—') : '—'}</div>
             <span class="day-status-pill approved">Approved</span>
           </div>
           ${subParts.length ? `<div class="day-sub">${subParts.join(' · ')}</div>` : ''}
@@ -2080,6 +2107,8 @@ function buildSessionCard(session, index) {
   const mins = calcSessionMins(session);
   const bounds = getSessionBounds(editKey || '', session);
   const metaText = '';
+  const startTime = bounds.start ? `${p2(bounds.start.getHours())}:${p2(bounds.start.getMinutes())}` : '';
+  const endTime = bounds.end ? `${p2(bounds.end.getHours())}:${p2(bounds.end.getMinutes())}` : '';
   return `
     <div class="session-card">
       <div class="session-head">
@@ -2089,11 +2118,11 @@ function buildSessionCard(session, index) {
       <div class="session-fields">
         <div class="session-row">
           <label>Start</label>
-          <input type="datetime-local" value="${esc(toLocalInputValue(bounds.start))}" onchange="updateSessionField(${index}, 'in', this.value)">
+          <input type="time" value="${esc(startTime)}" onchange="updateSessionField(${index}, 'in', this.value)">
         </div>
         <div class="session-row">
           <label>End</label>
-          <input type="datetime-local" value="${esc(toLocalInputValue(bounds.end))}" onchange="updateSessionField(${index}, 'out', this.value)">
+          <input type="time" value="${esc(endTime)}" onchange="updateSessionField(${index}, 'out', this.value)">
         </div>
         <div class="session-row">
           <label>Break</label>
@@ -2127,6 +2156,11 @@ function renderSessionsEditor() {
 function updateSessionField(index, field, value) {
   if (!editKey) return;
   const entry = getEntry(editKey);
+  // If the session doesn't exist yet in db (new day with no stored data),
+  // create placeholder sessions up to the requested index so edits are persisted.
+  while (entry.sessions.length <= index) {
+    entry.sessions.push(normalizeSession({ in: '', out: '', brk: 0, inISO: '', outISO: '' }, editKey, entry.sessions.length));
+  }
   if (!entry.sessions[index]) return;
 
   if (field === 'brk') {
@@ -2138,7 +2172,7 @@ function updateSessionField(index, field, value) {
       if (project?.clientId) entry.sessions[index].clientId = project.clientId;
     }
   } else {
-    updateSessionDateTime(entry.sessions[index], field, value);
+    updateSessionDateTime(entry.sessions[index], field, value, editKey);
   }
 
   setEntry(editKey, entry);

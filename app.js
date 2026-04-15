@@ -2119,10 +2119,10 @@ function buildSessionCard(session, index) {
   const startTime = bounds.start ? `${p2(bounds.start.getHours())}:${p2(bounds.start.getMinutes())}` : '';
   const endTime = bounds.end ? `${p2(bounds.end.getHours())}:${p2(bounds.end.getMinutes())}` : '';
   return `
-    <div class="session-card">
+    <div class="session-card" id="session-card-${index}">
       <div class="session-head">
         <div class="session-title">Session ${index + 1}</div>
-        <div class="session-total">${mins ? fmtMins(mins) : '—'}</div>
+        <div class="session-total" id="session-total-${index}">${mins ? fmtMins(mins) : '—'}</div>
       </div>
       <div class="session-fields">
         <div class="session-row">
@@ -2185,7 +2185,10 @@ function updateSessionField(index, field, value) {
   }
 
   setEntry(editKey, entry);
-  renderSessionsEditor();
+  // Use lightweight refresh instead of full re-render so the focused time
+  // input is not destroyed mid-edit (which would cause the native picker to
+  // commit the intermediate/pre-confirmation value before the user taps Done).
+  refreshSessionTotals();
 }
 
 function toggleSessionTag(index, tagId) {
@@ -2288,6 +2291,24 @@ function calcSheet() {
   const mins = getWorkedMins(entry, editKey);
   $('sr-val').textContent = mins ? fmtMins(mins) : '—';
   $('sr-pay').textContent = money(mins);
+}
+
+// Lightweight update: refresh only the per-session duration labels and the
+// sheet total, WITHOUT destroying and rebuilding the session input elements.
+// This avoids stealing focus from the input the user is currently editing,
+// which previously caused the native time picker to register an intermediate
+// value before the user tapped the "Done"/tick button.
+function refreshSessionTotals() {
+  if (!editKey) return;
+  const entry = getEntry(editKey);
+  (entry.sessions || []).forEach((s, i) => {
+    const el = document.getElementById(`session-total-${i}`);
+    if (el) {
+      const mins = calcSessionMins(s);
+      el.textContent = mins ? fmtMins(mins) : '—';
+    }
+  });
+  calcSheet();
 }
 
 async function saveEntry() {

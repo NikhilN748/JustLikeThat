@@ -105,7 +105,6 @@ function buildFullBackupPayload() {
     overtimeThresholdHours,
     overtimeRate,
     breakReminderHours,
-    autoBreakMins,
     roundingIncrementMins,
     roundingMode,
     scheduledStartTime,
@@ -124,6 +123,7 @@ function buildFullBackupPayload() {
 let weekOffset = 0;
 let calMonthOffset = 0;
 let editKey = null;
+let _editEntrySnapshot = null; // deep copy of db entry at the moment the sheet was opened
 let hourlyRate = parseFloat(localStorage.getItem('ht_rate') || '0');
 let currency = localStorage.getItem('ht_currency') || 'USD';
 let clockedIn = false;
@@ -144,7 +144,6 @@ let showOvertimeBar = localStorage.getItem('ht_show_overtime_bar') !== 'false'; 
 let overtimeThresholdHours = parseFloat(localStorage.getItem('ht_overtime_threshold') || '40');
 let overtimeRate = parseFloat(localStorage.getItem('ht_overtime_rate') || '1.5');
 let breakReminderHours = parseFloat(localStorage.getItem('ht_break_reminder_hours') || '6');
-let autoBreakMins = parseInt(localStorage.getItem('ht_auto_break_mins') || '30', 10) || 0;
 let roundingIncrementMins = parseInt(localStorage.getItem('ht_rounding_increment_mins') || '15', 10) || 15;
 let roundingMode = localStorage.getItem('ht_rounding_mode') || 'nearest';
 let scheduledStartTime = localStorage.getItem('ht_scheduled_start_time') || '09:00';
@@ -525,7 +524,6 @@ async function maybeRecoverMissedClockOut() {
   const now = new Date();
   entry.sessions[open.index].out = `${p2(now.getHours())}:${p2(now.getMinutes())}`;
   entry.sessions[open.index].outISO = now.toISOString();
-  entry.sessions[open.index] = applyAutoBreakToSession(entry.sessions[open.index], open.key);
   setEntry(open.key, entry);
   persist();
 
@@ -1001,12 +999,14 @@ function updateSessionDateTime(session, field, value, dayKey = '') {
   session[isoField] = date.toISOString();
 }
 
-function applyAutoBreakToSession(session, dayKey) {
-  return session;
-}
 
 function roundMins(mins) {
-  return mins > 0 ? mins : 0;
+  if (mins <= 0) return 0;
+  const inc = roundingIncrementMins || 1;
+  if (inc <= 1) return mins; // rounding disabled or 1-min increment = no visible change
+  if (roundingMode === 'up')   return Math.ceil(mins / inc) * inc;
+  if (roundingMode === 'down') return Math.floor(mins / inc) * inc;
+  return Math.round(mins / inc) * inc; // 'nearest' (default)
 }
 
 function getPayPeriodKeys(offset = weekOffset) {
@@ -1059,6 +1059,11 @@ function payrollStatusMeta(status) {
 
 async function submitWeekForApproval() {
   const review = getPayrollReview(getPayPeriodKeys());
+  const hasAnyHours = review.keys.some(key => getWorkedMinsForDay(key) > 0);
+  if (!hasAnyHours) {
+    iosAlert('No hours have been logged this week. Please add your hours before submitting.', 'Nothing to Submit');
+    return;
+  }
   review.keys.forEach(key => {
     const entry = getEntry(key);
     if (!isEntryLocked(key) && getEntryStatus(key) !== 'approved') setEntryStatus(key, 'submitted');
@@ -1070,6 +1075,11 @@ async function submitWeekForApproval() {
 
 async function approveWeek() {
   const review = getPayrollReview(getPayPeriodKeys());
+  const hasAnyHours = review.keys.some(key => getWorkedMinsForDay(key) > 0);
+  if (!hasAnyHours) {
+    iosAlert('No hours have been logged this week. There is nothing to approve.', 'Nothing to Approve');
+    return;
+  }
   if (review.issues.length) {
     const ok = await iosConfirm(`There are ${review.issues.length} payroll issue(s). Approve anyway?`, { okLabel: 'Approve', title: 'Payroll review' });
     if (!ok) return;
@@ -1152,20 +1162,7 @@ function getLastOut(entry) {
   return last.out || '';
 }
 
-function getDisplayRange(entry) {
-  const sessions = getSessions(entry).filter(s => s.in);
-  if (!sessions.length) return { text: '', count: 0 };
-  const first = sessions[0];
-  const last = sessions[sessions.length - 1];
-
-  if (sessions.length === 1) {
-    if (first.in && first.out) return { text: `${fmt12(first.in)} – ${fmt12(first.out)}`, count: 1 };
-    if (first.in && !first.out) return { text: `${fmt12(first.in)} – Running`, count: 1 };
-  }
-
-  const endText = last.out ? fmt12(last.out) : 'Running';
-  return { text: `${fmt12(first.in)} – ${endText}`, count: sessions.length };
-}
+// getDisplayRange removed — was dead code (never called). Use getDayDisplayRange instead.
 
 function calcSessionMins(session) {
   if (!session?.in || !session?.out) return 0;
@@ -1765,7 +1762,14 @@ function renderClockPage() {
   const attendanceFlags = getAttendanceFlags(key);
 
   $('td-date').textContent = `${DL[now.getDay()]}, ${MO[now.getMonth()]} ${now.getDate()}`;
-  $('td-in').textContent = getFirstInForDay(key) ? fmt12(getFirstInForDay(key)) : '—';
+  // For overnight active shifts clocked in on a previous day, show the actual
+  // clock-in time (not midnight, which is what getFirstInForDay returns when clipped).
+  let inDisplay = getFirstInForDay(key) ? fmt12(getFirstInForDay(key)) : '—';
+  if (clockedIn && clockInTime && clockInKey && clockInKey !== key) {
+    const inStr = `${p2(clockInTime.getHours())}:${p2(clockInTime.getMinutes())}`;
+    inDisplay = fmt12(inStr) + ' (prev. day)';
+  }
+  $('td-in').textContent = inDisplay;
   $('td-out').textContent = getLastOutForDay(key) ? fmt12(getLastOutForDay(key)) : (dayRange.text.includes('Running') ? 'Running' : '—');
   $('td-hrs').textContent = worked ? fmtMins(worked) : '—';
 
@@ -1931,9 +1935,15 @@ function startClockTimer() {
 
   const tick = () => {
     if (!clockedIn || !clockInTime) return;
-    const elapsed = Math.floor((new Date() - clockInTime) / 1000);
+    const now = new Date();
+    // For overnight shifts (clocked in on a previous calendar day),
+    // show only today's portion of the elapsed time (since midnight).
+    const todayMidnight = new Date(now);
+    todayMidnight.setHours(0, 0, 0, 0);
+    const effectiveStart = clockInTime < todayMidnight ? todayMidnight : clockInTime;
+    const elapsed = Math.floor((now - effectiveStart) / 1000);
     $('cTimer').innerHTML = fmtSecs(elapsed);
-    $('cLbl').textContent = 'Session active';
+    $('cLbl').textContent = clockInTime < todayMidnight ? 'Overnight shift active' : 'Session active';
     $('ci-dur').textContent = fmtMins(Math.floor(elapsed / 60));
     $('ci-earn').textContent = money(Math.floor(elapsed / 60)) || '—';
   };
@@ -2080,7 +2090,6 @@ async function toggleClock() {
     if (entry.sessions[activeSessionIndex]) {
       entry.sessions[activeSessionIndex].out = outStr;
       entry.sessions[activeSessionIndex].outISO = outTime.toISOString();
-      entry.sessions[activeSessionIndex] = applyAutoBreakToSession(entry.sessions[activeSessionIndex], clockInKey);
       setEntry(clockInKey, entry);
       persist();
     }
@@ -2228,6 +2237,8 @@ function openSheet(key, dateObj) {
     return;
   }
   editKey = key;
+  // Snapshot the raw db entry so we can fully revert if the user discards
+  _editEntrySnapshot = db[key] ? JSON.parse(JSON.stringify(db[key])) : null;
   const e = getEntry(key);
   const dow = dateObj.getDay();
 
@@ -2246,10 +2257,17 @@ async function closeSheet(force) {
   if (!force && sheetSnapshot !== null && sheetCurrentValues() !== sheetSnapshot) {
     const ok = await iosConfirm('Discard changes?', { okLabel: 'Discard', danger: true });
     if (!ok) return;
+    // Revert the in-memory db entry to what it was when the sheet was opened
+    if (_editEntrySnapshot !== null) {
+      db[editKey] = _editEntrySnapshot;
+    } else {
+      delete db[editKey];
+    }
   }
   $('overlay').classList.remove('open');
   editKey = null;
   sheetSnapshot = null;
+  _editEntrySnapshot = null;
 }
 
 $('overlay').addEventListener('click', function(e) {
@@ -2303,8 +2321,10 @@ async function saveEntry() {
       updatedAt: new Date().toISOString(),
       source: s.source || 'manual'
     }))
-    .map(s => applyAutoBreakToSession(s, editKey))
     .filter(s => s.in || s.out || s.brk || s.clientId || s.projectId || (s.tagIds && s.tagIds.length));
+
+  // Remove sessions that have a break but no times — they contribute nothing
+  entry.sessions = entry.sessions.filter(s => s.in || s.out);
 
   const badSession = entry.sessions.find(s => (s.in && !s.out) || (!s.in && s.out));
   if (badSession) {
@@ -2416,6 +2436,9 @@ async function clearAll() {
   clockInKey = null;
   activeSessionIndex = null;
   if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+  onBreak = false;
+  breakStartTime = null;
+  if (breakTimerInterval) { clearInterval(breakTimerInterval); breakTimerInterval = null; }
   renderWeek();
   if ($('page-clock').classList.contains('active')) renderClockPage();
   if ($('page-calendar').classList.contains('active')) renderCalendar();
@@ -2706,14 +2729,17 @@ function silentAutoBackup() {
     const payload = JSON.stringify({ db, exportedAt: new Date().toISOString(), version: 1 });
     const key = `ht_autobackup_${today}`;
     localStorage.setItem(key, payload);
-    // Keep only the last 7 daily auto-backups to avoid storage bloat
+    // Keep only the last 7 daily auto-backups to avoid storage bloat.
+    // Collect keys first — removing while iterating by index skips entries.
+    const oldBackupKeys = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (k && k.startsWith('ht_autobackup_') && k !== key) {
         const age = new Date(today) - new Date(k.replace('ht_autobackup_', ''));
-        if (age > 7 * 24 * 60 * 60 * 1000) localStorage.removeItem(k);
+        if (age > 7 * 24 * 60 * 60 * 1000) oldBackupKeys.push(k);
       }
     }
+    oldBackupKeys.forEach(k => localStorage.removeItem(k));
     localStorage.setItem('ht_lastAutoBackup', today);
   } catch (e) { /* silent — storage may be full */ }
 }
@@ -2881,15 +2907,17 @@ function saveTheme() {
 // ─── Session Overlap Validation ───
 function getSessionOverlaps(sessions, dayKey) {
   const issues = [];
-  const bounds = sessions.map((s, i) => ({ ...getSessionBounds(dayKey, s), index: i, session: s })).filter(b => b.start);
+  // Only check sessions that have both a start AND an end time.
+  // Open (running) sessions using new Date() as end caused false-positive overlaps.
+  const bounds = sessions
+    .map((s, i) => ({ ...getSessionBounds(dayKey, s), index: i, session: s }))
+    .filter(b => b.start && b.end);
 
   for (let i = 0; i < bounds.length; i++) {
     for (let j = i + 1; j < bounds.length; j++) {
       const a = bounds[i];
       const b = bounds[j];
-      const aEnd = a.end || new Date();
-      const bEnd = b.end || new Date();
-      if (a.start < bEnd && b.start < aEnd) {
+      if (a.start < b.end && b.start < a.end) {
         issues.push(`Session ${a.index + 1} and Session ${b.index + 1} overlap in time.`);
       }
     }
@@ -3254,7 +3282,6 @@ function applyRestoredBackup(data) {
   overtimeThresholdHours = Math.max(1, parseFloat(data.overtimeThresholdHours || overtimeThresholdHours) || 40);
   overtimeRate = Math.max(1, parseFloat(data.overtimeRate || overtimeRate) || 1.5);
   breakReminderHours = Math.max(1, parseFloat(data.breakReminderHours || breakReminderHours) || 6);
-  autoBreakMins = Math.max(0, parseInt(data.autoBreakMins || autoBreakMins, 10) || 0);
   roundingIncrementMins = Math.max(1, parseInt(data.roundingIncrementMins || roundingIncrementMins, 10) || 15);
   roundingMode = data.roundingMode || roundingMode;
   scheduledStartTime = data.scheduledStartTime || scheduledStartTime;
@@ -3264,7 +3291,6 @@ function applyRestoredBackup(data) {
   localStorage.setItem('ht_overtime_threshold', overtimeThresholdHours);
   localStorage.setItem('ht_overtime_rate', overtimeRate);
   localStorage.setItem('ht_break_reminder_hours', breakReminderHours);
-  localStorage.setItem('ht_auto_break_mins', autoBreakMins);
   localStorage.setItem('ht_rounding_increment_mins', roundingIncrementMins);
   localStorage.setItem('ht_rounding_mode', roundingMode);
   localStorage.setItem('ht_scheduled_start_time', scheduledStartTime);
@@ -3564,7 +3590,6 @@ if (typeof module !== 'undefined' && module.exports) {
     getDayDisplayRange,
     getFirstInForDay,
     getLastOutForDay,
-    applyAutoBreakToSession,
     roundMins,
     maybeRecoverMissedClockOut,
     updateSessionDateTime,

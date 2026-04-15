@@ -233,6 +233,7 @@ body {
   display: flex; justify-content: space-around; align-items: center;
   height: 72px; padding: 0 8px;
   z-index: 100;
+  isolation: isolate; /* Own stacking context — prevents slider from going behind the background */
   touch-action: none; /* Prevent scrolling when dragging */
 }
 .tab-slider {
@@ -243,7 +244,7 @@ body {
   width: calc((100% - 16px) / 4);
   background: var(--blue);
   border-radius: 999px;
-  z-index: -1;
+  z-index: 0; /* Keep above tab-bar background but below buttons — avoids iOS backdrop-filter glitch */
   transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
   box-shadow: 0 6px 20px rgba(0,88,188,0.45);
 }
@@ -252,12 +253,24 @@ body {
   box-shadow: 0 8px 24px rgba(0,88,188,0.55);
 }
 .tab-btn {
+  position: relative; /* Sit above the slider (z-index stacking) */
+  z-index: 1;
   flex: 1; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 3px;
-  cursor: pointer; border: none; background: none; font-family: var(--font);
+  cursor: pointer; border: none; background: transparent; font-family: var(--font);
   border-radius: 999px; height: 56px;
-  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), background 0.15s;
+  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
   color: var(--tertiary);
+  /* Suppress iOS/Android tap-highlight and active-state white flash */
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.tab-btn:active,
+.tab-btn:focus {
+  background: transparent;
+  outline: none;
 }
 .tab-btn.active {
   color: #fff;

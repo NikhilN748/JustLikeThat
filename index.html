@@ -710,7 +710,7 @@ body {
   transition: max-height 0.3s ease, opacity 0.25s ease;
   opacity: 0;
 }
-.s-submenu.open { max-height: 400px; opacity: 1; }
+.s-submenu.open { max-height: 1500px; opacity: 1; }
 .s-subrow {
   display: flex; align-items: center; gap: 12px;
   padding: 13px 16px 13px 52px;
@@ -1329,12 +1329,38 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
     <!-- Profile hero -->
     <div class="settings-profile">
       <div class="settings-avatar-wrap">
-        <div class="settings-avatar">N</div>
+        <div class="settings-avatar" id="heroAvatar" style="background-size:cover;background-position:center;">U</div>
         <div class="settings-avatar-online"></div>
       </div>
       <div>
-        <div class="settings-name">Nick</div>
+        <div class="settings-name" id="heroName">User</div>
         <div class="settings-subtitle">Hours Tracker</div>
+      </div>
+    </div>
+
+    <!-- Profile group -->
+    <div class="settings-group">
+      <div class="sg-label">Profile</div>
+      <div class="settings-card">
+        <div class="s-row tap" id="profileRow" onclick="toggleDataSubmenu('profileMenu','profileRow')">
+          <div class="s-row-icon slate">
+            <span class="material-symbols-outlined" style="font-size:18px;">person</span>
+          </div>
+          <span class="s-lbl">Edit Profile</span>
+          <span class="material-symbols-outlined s-chev-expand">chevron_right</span>
+        </div>
+        <div class="s-submenu" id="profileMenu">
+          <div style="padding:16px;">
+            <div style="margin-bottom:12px;">
+              <label style="display:block;font-size:11px;color:var(--tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Display Name</label>
+              <input type="text" id="profileNameInput" placeholder="User" style="width:100%;background:var(--bg);border:1px solid var(--separator);border-radius:10px;padding:10px;color:var(--label);font-size:15px;font-family:var(--font);box-sizing:border-box;outline:none;" oninput="saveProfile()">
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="display:block;font-size:11px;color:var(--tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Initials, Emoji, or Image URL</label>
+              <input type="text" id="profileAvatarInput" placeholder="U" style="width:100%;background:var(--bg);border:1px solid var(--separator);border-radius:10px;padding:10px;color:var(--label);font-size:15px;font-family:var(--font);box-sizing:border-box;outline:none;" oninput="saveProfile()">
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1342,14 +1368,66 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
     <div class="settings-group">
       <div class="sg-label">Work Identity</div>
       <div class="settings-card">
-        <div class="s-row">
+        <!-- Pay Rates (collapsible) -->
+        <div class="s-row tap" id="hourlyRateRow" onclick="toggleDataSubmenu('hourlyRateMenu','hourlyRateRow')">
           <div class="s-row-icon blue">
             <span class="material-symbols-outlined" style="font-size:18px;">payments</span>
           </div>
-          <span class="s-lbl">Hourly Rate</span>
+          <span class="s-lbl">Pay Rates</span>
           <div class="s-val">
             <span class="s-sym" id="rateSym">$</span>
-            <input class="s-input" type="number" id="rateInput" value="0.00" step="0.50" min="0" onchange="saveRate()">
+            <input class="s-input" type="number" id="rateInput" value="0.00" style="pointer-events:none;background:transparent;width:60px;" readonly>
+          </div>
+          <span class="material-symbols-outlined s-chev-expand">chevron_right</span>
+        </div>
+        <div class="s-submenu" id="hourlyRateMenu">
+          <div style="padding:16px;">
+            <!-- Add Pay Increase -->
+            <div style="margin-bottom:24px;">
+              <div style="font-size:14px;font-weight:600;color:var(--label);margin-bottom:12px;">Add Pay Increase</div>
+              <div style="display:flex;gap:12px;margin-bottom:12px;">
+                <div style="flex:1;">
+                  <label style="display:block;font-size:11px;color:var(--tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">New Rate</label>
+                  <input type="number" id="newRateInput" placeholder="0.00" step="0.5" style="width:100%;background:var(--bg);border:1px solid var(--separator);border-radius:10px;padding:10px;color:var(--label);font-size:15px;font-family:var(--font);box-sizing:border-box;outline:none;">
+                </div>
+                <div style="flex:1;">
+                  <label style="display:block;font-size:11px;color:var(--tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Effective Date</label>
+                  <input type="date" id="newRateDateInput" style="width:100%;background:var(--bg);border:1px solid var(--separator);border-radius:10px;padding:10px;color:var(--label);font-size:15px;font-family:var(--font);box-sizing:border-box;outline:none;">
+                </div>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:11px;color:var(--tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Note (Optional)</label>
+                <input type="text" id="newRateNoteInput" placeholder="e.g. Annual raise" style="width:100%;background:var(--bg);border:1px solid var(--separator);border-radius:10px;padding:10px;color:var(--label);font-size:15px;font-family:var(--font);box-sizing:border-box;outline:none;">
+              </div>
+              <button onclick="saveNewPayRate()" style="width:100%;padding:12px;background:var(--blue);color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:var(--font);">Save New Rate</button>
+              <div style="font-size:12px;color:var(--tertiary);margin-top:8px;line-height:1.4;">This rate applies from the selected date forward. Previous days keep their old rate.</div>
+            </div>
+
+            <!-- Advanced -->
+            <div style="margin-bottom:24px;padding-top:24px;border-top:1px dashed var(--separator);">
+              <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="const d = document.getElementById('advRates'); d.style.display = d.style.display === 'none' ? 'block' : 'none';">
+                <div style="font-size:14px;font-weight:600;color:var(--label);">Advanced Options</div>
+                <span class="material-symbols-outlined" style="font-size:18px;color:var(--tertiary);">expand_more</span>
+              </div>
+              <div id="advRates" style="display:none;margin-top:16px;">
+                <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:8px;">Replace All Rates</div>
+                <div style="display:flex;gap:12px;margin-bottom:12px;">
+                  <div style="flex:1;">
+                    <input type="number" id="replaceRateInput" placeholder="0.00" step="0.5" style="width:100%;background:var(--bg);border:1px solid var(--separator);border-radius:10px;padding:10px;color:var(--label);font-size:15px;font-family:var(--font);box-sizing:border-box;outline:none;">
+                  </div>
+                  <button onclick="confirmReplaceAllRates()" style="padding:0 16px;background:var(--red);color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);">Replace All</button>
+                </div>
+                <div style="font-size:12px;color:var(--tertiary);line-height:1.4;">Updates ALL past and future earnings to this single rate.</div>
+              </div>
+            </div>
+
+            <!-- History List -->
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--label);margin-bottom:8px;">Rate History</div>
+              <div id="payRateHistoryContainer" style="background:var(--bg);border-radius:10px;overflow:hidden;border:1px solid var(--separator);">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
           </div>
         </div>
         <div class="s-row">

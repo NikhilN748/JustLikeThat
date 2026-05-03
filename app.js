@@ -100,6 +100,7 @@ function buildFullBackupPayload() {
     version: 2,
     schemaVersion: SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
+    payRates,
     hourlyRate,
     currency,
     overtimeThresholdHours,
@@ -125,7 +126,10 @@ let calMonthOffset = 0;
 let editKey = null;
 let _editEntrySnapshot = null; // deep copy of db entry at the moment the sheet was opened
 let hourlyRate = parseFloat(localStorage.getItem('ht_rate') || '0');
+let payRates = []; // loaded by loadPayRates() + migratePayRates() after functions are defined
 let currency = localStorage.getItem('ht_currency') || 'USD';
+let profileName = localStorage.getItem('ht_profile_name') || 'User';
+let profileAvatar = localStorage.getItem('ht_profile_avatar') || 'U';
 let clockedIn = false;
 let clockInTime = null;
 let clockInKey = null;
@@ -1184,7 +1188,12 @@ function switchTab(name) {
   if (name === 'clock') renderClockPage();
   if (name === 'settings') {
     document.getElementById('rateInput').value = hourlyRate.toFixed(2);
+    const nIn = document.getElementById('profileNameInput');
+    const aIn = document.getElementById('profileAvatarInput');
+    if (nIn) nIn.value = profileName;
+    if (aIn) aIn.value = profileAvatar;
     renderDailyScheduleSettings();
+    renderPayRateHistorySettings();
   }
   // Hide floating week nav when not on tracker tab
   const floatNav = document.getElementById('floatWeekNav');
@@ -1291,7 +1300,7 @@ function renderWeek() {
       logged++;
     }
 
-    const earn = money(worked);
+    const dayRate = getRateForDate(key);
     const range = getDayDisplayRange(key, filters);
     const sessionCount = getDaySessionCount(key, filters);
     const breakMins = getTotalBreakForDay(key, filters);
@@ -1331,7 +1340,7 @@ function renderWeek() {
           ${subParts.length ? `<div class="day-sub">${subParts.join(' · ')}</div>` : ''}
         </div>
         <div class="day-right">
-          <div class="day-hrs ${worked?'':'zero'}">${worked ? `<span class="day-hrs-sym">${curSym()}</span>${(hourlyRate * worked / 60).toFixed(0)}` : '—'}</div>
+          <div class="day-hrs ${worked?'':'zero'}">${worked ? `<span class="day-hrs-sym">${curSym()}</span>${dayRate > 0 ? (dayRate * worked / 60).toFixed(0) : fmtMins(worked)}` : '—'}</div>
           ${worked ? `<div class="day-earn">${fmtMins(worked)}</div>` : ''}
         </div>
         <span class="material-symbols-outlined day-chev" style="font-size:16px;">lock</span>`;
@@ -1352,8 +1361,8 @@ function renderWeek() {
           ${subParts.length ? `<div class="day-sub">${subParts.join(' · ')}</div>` : ''}
         </div>
         <div class="day-right">
-          <div class="day-hrs ${worked?'':'zero'}">${worked ? `<span class="day-hrs-sym">${curSym()}</span>${(hourlyRate > 0 ? (hourlyRate * worked / 60).toFixed(0) : fmtMins(worked))}` : '—'}</div>
-          ${worked && hourlyRate > 0 ? `<div class="day-earn">${fmtMins(worked)}</div>` : ''}
+          <div class="day-hrs ${worked?'':'zero'}">${worked ? `<span class="day-hrs-sym">${curSym()}</span>${dayRate > 0 ? (dayRate * worked / 60).toFixed(0) : fmtMins(worked)}` : '—'}</div>
+          ${worked && dayRate > 0 ? `<div class="day-earn">${fmtMins(worked)}</div>` : ''}
         </div>
         <span class="material-symbols-outlined day-chev" style="font-size:16px;color:var(--green);">lock</span>`;
     } else {
@@ -1372,8 +1381,8 @@ function renderWeek() {
           ${subParts.length ? `<div class="day-sub">${subParts.join(' · ')}</div>` : ''}
         </div>
         <div class="day-right">
-          <div class="day-hrs ${worked?'':'zero'}">${worked ? `<span class="day-hrs-sym">${curSym()}</span>${(hourlyRate > 0 ? (hourlyRate * worked / 60).toFixed(0) : fmtMins(worked))}` : '—'}</div>
-          ${worked && hourlyRate > 0 ? `<div class="day-earn">${fmtMins(worked)}</div>` : (worked ? '' : '')}
+          <div class="day-hrs ${worked?'':'zero'}">${worked ? `<span class="day-hrs-sym">${curSym()}</span>${dayRate > 0 ? (dayRate * worked / 60).toFixed(0) : fmtMins(worked)}` : '—'}</div>
+          ${worked && dayRate > 0 ? `<div class="day-earn">${fmtMins(worked)}</div>` : (worked ? '' : '')}
         </div>
         <span class="material-symbols-outlined day-chev" style="font-size:18px;color:var(--outline);">chevron_right</span>`;
     }
@@ -1381,8 +1390,8 @@ function renderWeek() {
   });
 
   // Update banner: earnings is primary, hours is subtitle
-  const weeklyEarn = money(totalMins);
-  const earnDisplay = weeklyEarn ? weeklyEarn.replace(/^[^0-9]/, '') : '—'; // strip leading currency symbol (it's in bannerSym span)
+  const weeklyEarn = moneyForWeek(days);
+  const earnDisplay = weeklyEarn ? weeklyEarn.replace(/^[^\d]/, '') : '—'; // strip leading currency symbol (it's in bannerSym span)
   document.getElementById('totalEarn').textContent = earnDisplay;
   const bannerSym = document.getElementById('bannerSym');
   if (bannerSym) bannerSym.textContent = weeklyEarn ? curSym() : '';
@@ -1524,17 +1533,22 @@ function calcDateRange() {
   if (from > to) return;
 
   const filters = { clientId: selectedClientFilter, projectId: selectedProjectFilter };
-  let totalMins = 0, daysWorked = 0;
+  let totalMins = 0, daysWorked = 0, rangeEarnTotal = 0;
   const cur = new Date(from);
   while (cur <= to) {
     const key = dk(cur);
     const worked = getWorkedMinsForDay(key, filters);
-    if (worked > 0) { totalMins += worked; daysWorked++; }
+    if (worked > 0) {
+      totalMins += worked;
+      daysWorked++;
+      const rangeRate = getRateForDate(key);
+      if (rangeRate > 0) rangeEarnTotal += rangeRate * worked / 60;
+    }
     cur.setDate(cur.getDate() + 1);
   }
 
   const totalDays = Math.round((to - from) / (1000 * 60 * 60 * 24)) + 1;
-  const label = `${MO[from.getMonth()]} ${from.getDate()} – ${MO[to.getMonth()]} ${to.getDate()}${from.getFullYear() !== to.getFullYear() ? ', '+to.getFullYear() : ''}`;
+  const label = `${MO[from.getMonth()]} ${from.getDate()} \u2013 ${MO[to.getMonth()]} ${to.getDate()}${from.getFullYear() !== to.getFullYear() ? ', '+to.getFullYear() : ''}`;
 
   document.getElementById('rangeResultLabel').textContent = label;
   document.getElementById('rangeResultDays').textContent  = `${totalDays} day${totalDays!==1?'s':''}`;
@@ -1545,8 +1559,8 @@ function calcDateRange() {
     const avgMins = daysWorked > 0 ? Math.round(totalMins / daysWorked) : 0;
     document.getElementById('rangeResultHrs').textContent        = fmtMins(totalMins);
     document.getElementById('rangeResultDaysWorked').textContent = `${daysWorked} day${daysWorked!==1?'s':''} worked`;
-    document.getElementById('rangeResultEarn').textContent       = hourlyRate > 0 ? (money(totalMins) || '—') : '—';
-    document.getElementById('rangeResultAvg').textContent        = avgMins ? `Avg ${fmtMins(avgMins)} / day` : '—';
+    document.getElementById('rangeResultEarn').textContent       = rangeEarnTotal > 0 ? `${curSym()}${rangeEarnTotal.toFixed(2)}` : '\u2014';
+    document.getElementById('rangeResultAvg').textContent        = avgMins ? `Avg ${fmtMins(avgMins)} / day` : '\u2014';
   } else {
     if (result) result.style.display = 'none';
     if (empty)  empty.style.display  = 'block';
@@ -1698,8 +1712,7 @@ function renderCalendar() {
   const grid = $('calGrid');
   grid.innerHTML = '';
 
-  let monthMins = 0;
-  let logged = 0;
+  let monthMins = 0, logged = 0, monthEarn = 0;
 
   const prevMonthDays = new Date(year, month, 0).getDate();
   for (let i = 0; i < leading; i++) {
@@ -1721,6 +1734,8 @@ function renderCalendar() {
     if (worked > 0) {
       monthMins += worked;
       logged++;
+      const r = getRateForDate(key);
+      if (r > 0) monthEarn += r * worked / 60;
     }
 
     const isToday = key === todayKey;
@@ -1748,7 +1763,7 @@ function renderCalendar() {
   }
 
   $('calTotalHrs').textContent = monthMins > 0 ? fmtMins(monthMins) : '0h 00m';
-  $('calTotalEarn').textContent = money(monthMins) || '—';
+  $('calTotalEarn').textContent = monthEarn > 0 ? `${curSym()}${monthEarn.toFixed(2)}` : '—';
   $('calDaysLogged').textContent = `${logged} day${logged!==1?'s':''} logged`;
   const avg = logged > 0 ? Math.round(monthMins / logged) : 0;
   $('calAvgTxt').textContent = `Avg ${avg ? fmtMins(avg) : '—'} / day`;
@@ -1945,7 +1960,8 @@ function startClockTimer() {
     $('cTimer').innerHTML = fmtSecs(elapsed);
     $('cLbl').textContent = clockInTime < todayMidnight ? 'Overnight shift active' : 'Session active';
     $('ci-dur').textContent = fmtMins(Math.floor(elapsed / 60));
-    $('ci-earn').textContent = money(Math.floor(elapsed / 60)) || '—';
+    const todayRate = getRateForDate(dk(now));
+    $('ci-earn').textContent = (todayRate > 0 && elapsed > 0) ? `${curSym()}${(todayRate * elapsed / 3600).toFixed(2)}` : '—';
   };
 
   tick();
@@ -2290,7 +2306,7 @@ function calcSheet() {
   const entry = getEntry(editKey);
   const mins = getWorkedMins(entry, editKey);
   $('sr-val').textContent = mins ? fmtMins(mins) : '—';
-  $('sr-pay').textContent = money(mins);
+  $('sr-pay').textContent = editKey ? moneyForDay(editKey, mins) : money(mins);
 }
 
 // Lightweight update: refresh only the per-session duration labels and the
@@ -2395,11 +2411,19 @@ async function removeEntry() {
   if ($('page-clock').classList.contains('active')) renderClockPage();
 }
 
+// Legacy saveRate — kept for compatibility. The new UI uses saveNewPayRate/confirmReplaceAllRates.
+// This now updates the "initial rate" entry to keep payRates in sync.
 function saveRate() {
   const v = parseFloat($('rateInput').value) || 0;
   hourlyRate = Math.max(0, v);
   $('rateInput').value = hourlyRate.toFixed(2);
   localStorage.setItem('ht_rate', hourlyRate);
+  // Update the initial rate entry in payRates to match
+  if (payRates.length > 0 && payRates[0].effectiveAt === '1970-01-01T00:00:00') {
+    payRates[0].rate = hourlyRate;
+    savePayRates();
+    renderPayRateHistorySettings();
+  }
   renderWeek();
   if ($('page-calendar').classList.contains('active')) renderCalendar();
   if ($('page-clock').classList.contains('active')) renderClockPage();
@@ -2412,6 +2436,35 @@ function saveCurrency() {
   renderWeek();
   if ($('page-calendar').classList.contains('active')) renderCalendar();
   if ($('page-clock').classList.contains('active')) renderClockPage();
+}
+
+function applyProfile() {
+  const heroName = $('heroName');
+  const heroAvatar = $('heroAvatar');
+  if (heroName) heroName.textContent = profileName;
+  if (heroAvatar) {
+    if (profileAvatar.startsWith('http')) {
+      heroAvatar.style.backgroundImage = `url('${profileAvatar}')`;
+      heroAvatar.textContent = '';
+    } else {
+      heroAvatar.style.backgroundImage = '';
+      heroAvatar.textContent = profileAvatar.substring(0, 2);
+    }
+  }
+}
+
+function saveProfile() {
+  const nameIn = $('profileNameInput');
+  const avIn = $('profileAvatarInput');
+  if (nameIn) {
+    profileName = nameIn.value.trim() || 'User';
+    localStorage.setItem('ht_profile_name', profileName);
+  }
+  if (avIn) {
+    profileAvatar = avIn.value.trim() || 'U';
+    localStorage.setItem('ht_profile_avatar', profileAvatar);
+  }
+  applyProfile();
 }
 
 function saveWeekStart() {
@@ -2436,6 +2489,250 @@ function saveOvertimeRate() {
   $('overtimeRateInput').value = overtimeRate;
   localStorage.setItem('ht_overtime_rate', overtimeRate);
   renderWeek();
+}
+
+// ═══════════════════════════════════════
+//  PAY RATE HISTORY
+// ═══════════════════════════════════════
+
+function loadPayRates() {
+  try {
+    const raw = localStorage.getItem('ht_pay_rates');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length) {
+        return parsed.sort((a, b) => (a.effectiveAt || '') <= (b.effectiveAt || '') ? -1 : 1);
+      }
+    }
+  } catch (e) {}
+  return [];
+}
+
+function savePayRates() {
+  payRates.sort((a, b) => (a.effectiveAt || '') <= (b.effectiveAt || '') ? -1 : 1);
+  localStorage.setItem('ht_pay_rates', JSON.stringify(payRates));
+  // Keep ht_rate in sync with the most recent rate
+  const latest = payRates[payRates.length - 1];
+  if (latest) {
+    hourlyRate = latest.rate;
+    localStorage.setItem('ht_rate', hourlyRate);
+  }
+}
+
+function migratePayRates() {
+  if (payRates.length > 0) return;
+  const legacyRate = parseFloat(localStorage.getItem('ht_rate') || '0');
+  payRates = [{
+    id: collectionItemId('rate'),
+    rate: legacyRate,
+    currency: currency,
+    effectiveAt: '1970-01-01T00:00:00',
+    note: 'Initial rate'
+  }];
+  localStorage.setItem('ht_pay_rates', JSON.stringify(payRates));
+}
+
+function addPayRate(rate, effectiveDateStr, note) {
+  const effectiveAt = effectiveDateStr + 'T00:00:00';
+  payRates = payRates.filter(r => r.effectiveAt !== effectiveAt);
+  payRates.push({
+    id: collectionItemId('rate'),
+    rate: parseFloat(rate) || 0,
+    currency: currency,
+    effectiveAt,
+    note: note || ''
+  });
+  savePayRates();
+}
+
+function replaceAllRates(rate) {
+  payRates = [{
+    id: collectionItemId('rate'),
+    rate: parseFloat(rate) || 0,
+    currency: currency,
+    effectiveAt: '1970-01-01T00:00:00',
+    note: 'Manual override — all rates replaced'
+  }];
+  savePayRates();
+}
+
+function editPayRate(id, newRate, newEffectiveDateStr, newNote) {
+  const idx = payRates.findIndex(r => r.id === id);
+  if (idx === -1) return;
+  payRates[idx] = { ...payRates[idx], rate: parseFloat(newRate) || 0, effectiveAt: newEffectiveDateStr + 'T00:00:00', note: newNote || '' };
+  savePayRates();
+}
+
+function deletePayRate(id) {
+  payRates = payRates.filter(r => r.id !== id);
+  if (payRates.length === 0) {
+    payRates = [{ id: collectionItemId('rate'), rate: 0, currency: currency, effectiveAt: '1970-01-01T00:00:00', note: 'Default rate' }];
+  }
+  savePayRates();
+}
+
+// Returns the numeric hourly rate active on a given day.
+// date: Date object or 'YYYY-MM-DD' string.
+function getRateForDate(date) {
+  if (!payRates.length) return hourlyRate;
+  let key;
+  if (typeof date === 'string' && date.length === 10) {
+    key = date;
+  } else {
+    const d = date instanceof Date ? date : new Date(date);
+    key = isNaN(d) ? '' : dk(d);
+  }
+  if (!key) return hourlyRate;
+  let active = payRates[0].rate;
+  for (const r of payRates) {
+    const rKey = r.effectiveAt ? r.effectiveAt.slice(0, 10) : '';
+    if (rKey <= key) active = r.rate;
+    else break;
+  }
+  return active;
+}
+
+// Earnings string for a single calendar day.
+function moneyForDay(dayKey, workedMinsOverride) {
+  const worked = workedMinsOverride != null ? workedMinsOverride : getWorkedMinsForDay(dayKey);
+  const rate = getRateForDate(dayKey);
+  if (!(rate > 0) || !(worked > 0)) return '';
+  return `${curSym()}${(rate * worked / 60).toFixed(2)}`;
+}
+
+// Earnings string for a week, respecting per-day rates and overtime.
+function moneyForWeek(days) {
+  const amount = weekEarningsAmount(days);
+  return amount > 0 ? `${curSym()}${amount.toFixed(2)}` : '';
+}
+
+// Numeric weekly earnings with per-day rates + overtime.
+function weekEarningsAmount(days, filters) {
+  const threshMins = overtimeThresholdHours * 60;
+  let cumMins = 0, total = 0;
+  filters = filters || { clientId: selectedClientFilter, projectId: selectedProjectFilter };
+  for (const d of days) {
+    const key = typeof d === 'string' ? d : dk(d);
+    const worked = getWorkedMinsForDay(key, filters);
+    if (!(worked > 0)) continue;
+    const rate = getRateForDate(key);
+    if (!(rate > 0)) { cumMins += worked; continue; }
+    if (overtimeThresholdHours > 0 && (cumMins + worked) > threshMins) {
+      const regularPortion = Math.max(0, threshMins - cumMins);
+      const otPortion = worked - regularPortion;
+      total += rate * regularPortion / 60;
+      total += rate * overtimeRate * otPortion / 60;
+    } else {
+      total += rate * worked / 60;
+    }
+    cumMins += worked;
+  }
+  return total;
+}
+
+function renderPayRateHistorySettings() {
+  const container = document.getElementById('payRateHistoryContainer');
+  if (!container) return;
+  if (!payRates.length) {
+    container.innerHTML = '<div style="padding:12px 16px;font-size:14px;color:var(--tertiary);">No rate history found.</div>';
+    return;
+  }
+  const todayKey = dk(new Date());
+  const sorted = [...payRates].sort((a, b) => (b.effectiveAt || '') <= (a.effectiveAt || '') ? -1 : 1);
+  container.innerHTML = sorted.map(r => {
+    const dateStr = r.effectiveAt ? r.effectiveAt.slice(0, 10) : '';
+    const isInitial = !dateStr || dateStr === '1970-01-01';
+    const d = isInitial ? null : new Date(dateStr + 'T12:00:00');
+    const dateLabel = isInitial ? 'All time (initial)' : (d && !isNaN(d) ? `${MO[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}` : dateStr);
+    const isPast = dateStr <= todayKey;
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--separator);">
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--label);">${curSym()}${(r.rate || 0).toFixed(2)}/hr</div>
+          <div style="font-size:11px;color:var(--tertiary);margin-top:2px;">${esc(dateLabel)}${r.note ? ' \xB7 ' + esc(r.note) : ''}</div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button onclick="openEditPayRate('${esc(r.id)}')" style="font-size:13px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:var(--font);font-weight:600;padding:4px 8px;">Edit</button>
+          ${payRates.length > 1 ? `<button onclick="confirmDeletePayRate('${esc(r.id)}',${isPast})" style="font-size:13px;color:var(--red);background:none;border:none;cursor:pointer;font-family:var(--font);font-weight:600;padding:4px 8px;">Delete</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function saveNewPayRate() {
+  const rateInput = document.getElementById('newRateInput');
+  const dateInput = document.getElementById('newRateDateInput');
+  const noteInput = document.getElementById('newRateNoteInput');
+  if (!rateInput || !dateInput) return;
+  const rate = parseFloat(rateInput.value);
+  const dateStr = dateInput.value;
+  const note = noteInput ? noteInput.value.trim() : '';
+  if (!(rate > 0)) { await iosAlert('Please enter a valid hourly rate greater than 0.'); return; }
+  if (!dateStr) { await iosAlert('Please select an effective date.'); return; }
+  addPayRate(rate, dateStr, note);
+  const rateInput2 = document.getElementById('rateInput');
+  if (rateInput2) rateInput2.value = hourlyRate.toFixed(2);
+  rateInput.value = '';
+  if (noteInput) noteInput.value = '';
+  renderPayRateHistorySettings();
+  renderWeek();
+  if (document.getElementById('page-calendar').classList.contains('active')) renderCalendar();
+  showExportToast('New pay rate saved');
+}
+
+async function confirmReplaceAllRates() {
+  const input = document.getElementById('replaceRateInput');
+  if (!input) return;
+  const rate = parseFloat(input.value);
+  if (!(rate > 0)) { await iosAlert('Please enter a valid rate.'); return; }
+  const ok = await iosConfirm(
+    `This will recalculate ALL previous and future earnings using ${curSym()}${rate.toFixed(2)}/hr. Use this only if your old rate was entered incorrectly.`,
+    { okLabel: 'Replace All Rates', danger: true, title: 'Replace Pay Rate History' }
+  );
+  if (!ok) return;
+  replaceAllRates(rate);
+  const rateInput2 = document.getElementById('rateInput');
+  if (rateInput2) rateInput2.value = hourlyRate.toFixed(2);
+  renderPayRateHistorySettings();
+  renderWeek();
+  if (document.getElementById('page-calendar').classList.contains('active')) renderCalendar();
+  showExportToast('All rates replaced');
+}
+
+async function openEditPayRate(id) {
+  const r = payRates.find(x => x.id === id);
+  if (!r) return;
+  const dateStr = r.effectiveAt ? r.effectiveAt.slice(0, 10) : '';
+  const isInitial = !dateStr || dateStr === '1970-01-01';
+  const todayKey = dk(new Date());
+  if (!isInitial && dateStr < todayKey) {
+    const ok = await iosConfirm('Editing this rate will change historical earnings for past days. Continue?', { okLabel: 'Edit Anyway', title: 'Editing Past Rate' });
+    if (!ok) return;
+  }
+  const newRateStr = await iosPrompt(`New rate (currently ${curSym()}${r.rate.toFixed(2)}):`, { title: 'Edit Rate', placeholder: r.rate.toFixed(2), okLabel: 'Next' });
+  if (newRateStr === null) return;
+  const parsedRate = parseFloat(newRateStr);
+  if (!(parsedRate > 0)) { await iosAlert('Invalid rate.'); return; }
+  const newNote = await iosPrompt('Note (optional):', { title: 'Edit Note', placeholder: r.note || '', okLabel: 'Save' });
+  if (newNote === null) return;
+  editPayRate(id, parsedRate, isInitial ? '1970-01-01' : dateStr, newNote);
+  renderPayRateHistorySettings();
+  renderWeek();
+  if (document.getElementById('page-calendar').classList.contains('active')) renderCalendar();
+  showExportToast('Rate updated');
+}
+
+async function confirmDeletePayRate(id, isPast) {
+  const msg = isPast
+    ? 'Deleting this rate will affect historical earnings. Continue?'
+    : 'Delete this pay rate?';
+  const ok = await iosConfirm(msg, { okLabel: 'Delete', danger: true });
+  if (!ok) return;
+  deletePayRate(id);
+  renderPayRateHistorySettings();
+  renderWeek();
+  if (document.getElementById('page-calendar').classList.contains('active')) renderCalendar();
+  showExportToast('Rate deleted');
 }
 
 async function clearAll() {
@@ -2483,7 +2780,7 @@ function buildCSV() {
     if (!hasAnyDataForDay(key, filters)) return;
 
     const worked = getWorkedMinsForDay(key, filters);
-    const earn = money(worked);
+    const earn = moneyForDay(key, worked);
     const meta = getSessions(e).filter(session => sessionMatchesFilters(session, filters)).map(sessionMetaText).filter(Boolean).join(' | ');
     const status = payrollStatusMeta(getEntryStatus(key)).label;
     const row = [
@@ -2833,6 +3130,8 @@ function loadDailySchedule() {
 }
 
 let dailySchedule = loadDailySchedule();
+payRates = loadPayRates();
+migratePayRates();
 
 function saveDailySchedule() {
   localStorage.setItem('ht_daily_schedule', JSON.stringify(dailySchedule));
@@ -2980,7 +3279,7 @@ function buildCSVForRange(startDate, endDate, filters) {
     if (!hasAnyDataForDay(key, filters) && dayType === 'work') { d.setDate(d.getDate() + 1); continue; }
 
     const worked = getWorkedMinsForDay(key, filters);
-    const earn = money(worked);
+    const earn = moneyForDay(key, worked);
     const meta = getSessions(e).filter(session => sessionMatchesFilters(session, filters)).map(sessionMetaText).filter(Boolean).join(' | ');
     const status = payrollStatusMeta(getEntryStatus(key)).label;
     const row = [
@@ -3105,16 +3404,15 @@ function exportPDFTimesheetForRange(startDate, endDate) {
       <td style="color:#374151;">${range.text || (dayType !== 'work' ? dayType.charAt(0).toUpperCase()+dayType.slice(1) : '—')}</td>
       <td style="text-align:center;color:#6b7280;">${brk ? brk+' min' : '—'}</td>
       <td style="text-align:right;font-weight:700;color:#111827;">${worked ? fmtMins(worked) : '—'}</td>
-      <td style="text-align:right;color:${hourlyRate > 0 ? '#16a34a' : '#374151'};font-weight:600;">${hourlyRate > 0 ? (money(worked) || '—') : '—'}</td>
+      <td style="text-align:right;color:${getRateForDate(key) > 0 ? '#16a34a' : '#374151'};font-weight:600;">${moneyForDay(key, worked) || '—'}</td>
       <td style="color:#9ca3af;font-size:12px;">${e.note || ''}</td>
     </tr>`;
     cur.setDate(cur.getDate() + 1);
   }
-  const otMins = Math.max(0, totalMins - otThreshMins);
-  const regularMins = Math.min(totalMins, otThreshMins);
-  const regularEarn = hourlyRate * regularMins / 60;
-  const otEarn = hourlyRate * overtimeRate * otMins / 60;
-  const totalEarn = regularEarn + otEarn;
+  const allDays = [];
+  { let _c = new Date(startDate); while (_c <= endDate) { allDays.push(dk(_c)); _c.setDate(_c.getDate()+1); } }
+  const totalEarn = weekEarningsAmount(allDays, filters);
+  const otEarn = 0; // included in totalEarn via weekEarningsAmount
   const avgMins = daysWorked > 0 ? Math.round(totalMins / daysWorked) : 0;
   const label = `${MO[startDate.getMonth()]} ${startDate.getDate()} – ${MO[endDate.getMonth()]} ${endDate.getDate()}, ${startDate.getFullYear()}`;
   const win = window.open('', '_blank');
@@ -3199,16 +3497,13 @@ function exportPDFTimesheet() {
       <td style="color:#374151;">${range.text || (dayType !== 'work' ? dayType.charAt(0).toUpperCase()+dayType.slice(1) : '—')}</td>
       <td style="text-align:center;color:#6b7280;">${brk ? brk+' min' : '—'}</td>
       <td style="text-align:right;font-weight:700;color:#111827;">${worked ? fmtMins(worked) : '—'}</td>
-      <td style="text-align:right;color:${hourlyRate > 0 ? '#16a34a' : '#374151'};font-weight:600;">${hourlyRate > 0 ? (money(worked) || '—') : '—'}</td>
+      <td style="text-align:right;color:${getRateForDate(key) > 0 ? '#16a34a' : '#374151'};font-weight:600;">${moneyForDay(key, worked) || '—'}</td>
       <td style="color:#9ca3af;font-size:12px;">${e.note || ''}</td>
     </tr>`;
   });
 
-  const otMins = Math.max(0, totalMins - otThreshMins);
-  const regularMins = Math.min(totalMins, otThreshMins);
-  const regularEarn = hourlyRate * regularMins / 60;
-  const otEarn = hourlyRate * overtimeRate * otMins / 60;
-  const totalEarn = regularEarn + otEarn;
+  const totalEarn = weekEarningsAmount(days, filters);
+  const otEarn = 0; // included in totalEarn
   const avgMins = daysWorked > 0 ? Math.round(totalMins / daysWorked) : 0;
 
   const win = window.open('', '_blank');
@@ -3335,12 +3630,23 @@ function applyRestoredBackup(data) {
     currency = data.currency;
     localStorage.setItem('ht_currency', currency);
   }
+  // Restore pay rate history; fall back to migration from hourlyRate for old backups
+  if (Array.isArray(data.payRates) && data.payRates.length) {
+    payRates = data.payRates.sort((a, b) => (a.effectiveAt || '') <= (b.effectiveAt || '') ? -1 : 1);
+    localStorage.setItem('ht_pay_rates', JSON.stringify(payRates));
+  } else {
+    // Old backup: seed from hourlyRate
+    localStorage.removeItem('ht_pay_rates');
+    payRates = [];
+    migratePayRates();
+  }
   persist();
   localStorage.setItem('ht_rate', hourlyRate);
   $('rateInput').value = hourlyRate.toFixed(2);
   $('rateSym').textContent = curSym();
   const curSel = $('currencySelect');
   if (curSel) curSel.value = currency;
+  renderPayRateHistorySettings();
   restoreClockState();
   renderWeek();
   renderClockPage();
@@ -3487,6 +3793,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   const _otRate = $('overtimeRateInput');
   if (_otRate) _otRate.value = overtimeRate;
   applyTheme();
+  applyProfile();
   renderDailyScheduleSettings();
   // Sync overtime bar toggle UI
   const otToggle = document.getElementById('overtimeBarToggle');
@@ -3622,6 +3929,16 @@ if (typeof module !== 'undefined' && module.exports) {
     buildCSVForRange,
     loadDailySchedule,
     getScheduleForDate,
+    getRateForDate,
+    moneyForDay,
+    moneyForWeek,
+    weekEarningsAmount,
+    loadPayRates,
+    migratePayRates,
+    addPayRate,
+    replaceAllRates,
+    editPayRate,
+    deletePayRate,
     __setDb(nextDb) {
       db = nextDb || {};
     },

@@ -636,6 +636,12 @@ body {
    SETTINGS PAGE
    ═══════════════════════════════════════ */
 .settings-page { padding: 0 20px; }
+.settings-home-view { display: block; }
+.settings-home-view.hidden { display: none; }
+.settings-detail-view { display: none; }
+.settings-detail-view.active { display: block; }
+.settings-detail-anim.active { animation: pageFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+#page-settings.settings-detail-open .nav-bar { display: none; }
 
 /* Profile hero */
 .settings-profile {
@@ -690,6 +696,15 @@ body {
 .s-row-icon.amber  { background: rgba(180,83,9,0.1);   color: var(--amber); }
 .s-row-icon.red    { background: var(--red-bg);         color: var(--red); }
 .s-lbl { font-size: 15px; font-weight: 500; flex: 1; }
+.s-stack {
+  display: flex; flex-direction: column; gap: 2px;
+  flex: 1; min-width: 0;
+}
+.s-stack .s-lbl { flex: none; }
+.s-subtext {
+  font-size: 12px; color: var(--tertiary); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .s-val { display: flex; align-items: center; gap: 6px; }
 .s-input {
   border: none; outline: none; font-family: var(--font); font-size: 15px;
@@ -701,33 +716,125 @@ body {
   color: var(--blue); background: transparent; font-weight: 600;
 }
 .s-chev { color: var(--outline); font-size: 16px; }
-.s-chev-expand { color: var(--outline); font-size: 18px; transition: transform 0.25s ease; }
-.s-row.expanded .s-chev-expand { transform: rotate(90deg); }
 
-/* Collapsible sub-menu inside settings cards */
-.s-submenu {
-  max-height: 0; overflow: hidden;
-  transition: max-height 0.3s ease, opacity 0.25s ease;
-  opacity: 0;
-}
-.s-submenu.open { max-height: 1500px; opacity: 1; }
-.s-subrow {
-  display: flex; align-items: center; gap: 12px;
-  padding: 13px 16px 13px 52px;
+.settings-detail-header {
+  position: sticky; top: 0; z-index: 8;
+  display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  align-items: center; gap: 12px;
+  padding: calc(env(safe-area-inset-top, 20px) + 12px) 20px 12px;
+  margin: 0 -20px 20px;
+  background: var(--nav-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--separator);
-  background: var(--fill); cursor: pointer; min-height: 48px;
 }
-.s-subrow:last-child { border-bottom: none; }
-.s-subrow:active { opacity: 0.65; }
-.s-subrow-icon {
-  width: 26px; height: 26px; border-radius: 7px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+.settings-detail-back {
+  display: inline-flex; align-items: center; gap: 2px;
+  justify-self: start;
+  min-height: 36px; padding: 0 4px;
+  background: none; border: none;
+  color: var(--blue); font-family: var(--font); font-size: 15px; font-weight: 600;
+  cursor: pointer;
 }
-.s-subrow-icon.blue  { background: rgba(0,88,188,0.1);  color: var(--blue); }
-.s-subrow-icon.slate { background: var(--separator);     color: var(--secondary); }
-.s-subrow-lbl { font-size: 14px; font-weight: 500; flex: 1; color: var(--label); }
-.s-subrow-chev { color: var(--outline); font-size: 16px; }
+.settings-detail-back:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+.settings-detail-back-ghost {
+  visibility: hidden; pointer-events: none;
+}
+.settings-detail-title {
+  font-size: 17px; font-weight: 700; color: var(--label); letter-spacing: -0.02em;
+}
+.settings-detail-content {
+  display: flex; flex-direction: column; gap: 20px;
+  padding-bottom: 10px;
+}
+.settings-detail-card {
+  padding: 16px;
+}
+.settings-section-title {
+  font-size: 14px; font-weight: 600; color: var(--label);
+  margin-bottom: 12px;
+}
+.settings-section-title.compact { margin-bottom: 8px; }
+.settings-section-note {
+  font-size: 12px; color: var(--tertiary); line-height: 1.45;
+  margin-top: 8px;
+}
+.settings-section-divider {
+  margin-bottom: 24px; padding-top: 24px;
+  border-top: 1px dashed var(--separator);
+}
+.settings-action-row {
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+}
+.settings-input-grid {
+  display: flex; gap: 12px; margin-bottom: 12px;
+}
+.settings-input-col {
+  flex: 1;
+}
+.settings-field {
+  margin-bottom: 12px;
+}
+.settings-field:last-child {
+  margin-bottom: 0;
+}
+.settings-field-label {
+  display: block;
+  font-size: 11px; color: var(--tertiary);
+  margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.settings-text-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--separator);
+  border-radius: 10px;
+  padding: 10px;
+  color: var(--label);
+  font-size: 15px;
+  font-family: var(--font);
+  box-sizing: border-box;
+  outline: none;
+}
+.settings-primary-btn,
+.settings-danger-btn {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.settings-primary-btn {
+  background: var(--blue);
+  color: #fff;
+}
+.settings-danger-btn {
+  background: var(--red);
+  color: #fff;
+}
+.settings-inline-action {
+  padding: 0 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.settings-history-card {
+  background: var(--bg);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--separator);
+}
 
 /* Toggle switch */
 .toggle-switch {
@@ -749,6 +856,58 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
 /* Schedule rows */
 .sched-day-row { padding: 12px 16px; border-bottom: 1px solid var(--separator); }
 .sched-day-row:last-child { border-bottom: none; }
+.sched-day-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sched-day-header.with-times { margin-bottom: 10px; }
+.sched-day-label {
+  font-size: 16px; font-weight: 500; color: var(--label);
+}
+.sched-toggle {
+  position: relative; display: inline-block;
+  width: 51px; height: 31px;
+}
+.sched-toggle input {
+  opacity: 0; width: 0; height: 0;
+}
+.sched-toggle-track {
+  position: absolute; inset: 0;
+  cursor: pointer; border-radius: 31px;
+  transition: background 0.2s;
+  background: var(--fill);
+}
+.sched-toggle-thumb {
+  position: absolute; left: 2px; bottom: 2px;
+  width: 27px; height: 27px; border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 0.2s;
+}
+.sched-toggle input:checked + .sched-toggle-track {
+  background: var(--green);
+}
+.sched-toggle input:checked + .sched-toggle-track .sched-toggle-thumb {
+  transform: translateX(20px);
+}
+.sched-time-grid {
+  display: flex; gap: 12px;
+}
+.sched-time-card {
+  flex: 1;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.sched-time-label {
+  font-size: 11px; color: var(--tertiary);
+  text-transform: uppercase; letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+.sched-time-input {
+  border: none; outline: none; background: transparent;
+  color: var(--blue); font-family: var(--font);
+  font-size: 16px; font-weight: 500; width: 100%;
+}
 
 /* ═══════════════════════════════════════
    BOTTOM SHEET / OVERLAY
@@ -1325,51 +1484,38 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
   </div>
 
   <div class="settings-page">
-
-    <!-- Profile hero -->
-    <div class="settings-profile">
-      <div class="settings-avatar-wrap">
-        <div class="settings-avatar" id="heroAvatar" style="background-size:cover;background-position:center;">U</div>
-        <div class="settings-avatar-online"></div>
-      </div>
-      <div>
-        <div class="settings-name" id="heroName">User</div>
-        <div class="settings-subtitle">Hours Tracker</div>
-      </div>
-    </div>
-
-    <!-- Profile group -->
-    <div class="settings-group">
-      <div class="sg-label">Profile</div>
-      <div class="settings-card">
-        <div class="s-row tap" id="profileRow" onclick="toggleDataSubmenu('profileMenu','profileRow')">
-          <div class="s-row-icon slate">
-            <span class="material-symbols-outlined" style="font-size:18px;">person</span>
-          </div>
-          <span class="s-lbl">Edit Profile</span>
-          <span class="material-symbols-outlined s-chev-expand">chevron_right</span>
+    <div class="settings-home-view" id="settingsHomeView">
+      <div class="settings-profile">
+        <div class="settings-avatar-wrap">
+          <div class="settings-avatar" id="heroAvatar" style="background-size:cover;background-position:center;">U</div>
+          <div class="settings-avatar-online"></div>
         </div>
-        <div class="s-submenu" id="profileMenu">
-          <div style="padding:16px;">
-            <div style="margin-bottom:12px;">
-              <label style="display:block;font-size:11px;color:var(--tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Display Name</label>
-              <input type="text" id="profileNameInput" placeholder="User" style="width:100%;background:var(--bg);border:1px solid var(--separator);border-radius:10px;padding:10px;color:var(--label);font-size:15px;font-family:var(--font);box-sizing:border-box;outline:none;" oninput="saveProfile()">
+        <div>
+          <div class="settings-name" id="heroName">User</div>
+          <div class="settings-subtitle">Hours Tracker</div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="sg-label">Profile</div>
+        <div class="settings-card">
+          <div class="s-row tap" onclick="openSettingsPage('profile')">
+            <div class="s-row-icon slate">
+              <span class="material-symbols-outlined" style="font-size:18px;">person</span>
             </div>
-            <div style="margin-bottom:12px;">
-              <label style="display:block;font-size:11px;color:var(--tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Initials, Emoji, or Image URL</label>
-              <input type="text" id="profileAvatarInput" placeholder="U" style="width:100%;background:var(--bg);border:1px solid var(--separator);border-radius:10px;padding:10px;color:var(--label);font-size:15px;font-family:var(--font);box-sizing:border-box;outline:none;" oninput="saveProfile()">
+            <div class="s-stack">
+              <span class="s-lbl">Edit Profile</span>
+              <span class="s-subtext" id="settingsProfileSummary">User</span>
             </div>
+            <span class="material-symbols-outlined s-chev">chevron_right</span>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Pay group -->
     <div class="settings-group">
-      <div class="sg-label">Work Identity</div>
+      <div class="sg-label">Work</div>
       <div class="settings-card">
-        <!-- Pay Rates (collapsible) -->
-        <div class="s-row tap" id="hourlyRateRow" onclick="toggleDataSubmenu('hourlyRateMenu','hourlyRateRow')">
+        <div class="s-row tap" onclick="openSettingsPage('pay-rates')">
           <div class="s-row-icon blue">
             <span class="material-symbols-outlined" style="font-size:18px;">payments</span>
           </div>
@@ -1378,109 +1524,35 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
             <span class="s-sym" id="rateSym">$</span>
             <input class="s-input" type="number" id="rateInput" value="0.00" style="pointer-events:none;background:transparent;width:60px;" readonly>
           </div>
-          <span class="material-symbols-outlined s-chev-expand">chevron_right</span>
+          <span class="material-symbols-outlined s-chev">chevron_right</span>
         </div>
-        <div class="s-submenu" id="hourlyRateMenu">
-          <div style="padding:16px;">
-            <!-- Add Pay Increase -->
-            <div style="margin-bottom:24px;">
-              <div style="font-size:14px;font-weight:600;color:var(--label);margin-bottom:12px;">Add Pay Increase</div>
-              <div style="display:flex;gap:12px;margin-bottom:12px;">
-                <div style="flex:1;">
-                  <label style="display:block;font-size:11px;color:var(--tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">New Rate</label>
-                  <input type="number" id="newRateInput" placeholder="0.00" step="0.5" style="width:100%;background:var(--bg);border:1px solid var(--separator);border-radius:10px;padding:10px;color:var(--label);font-size:15px;font-family:var(--font);box-sizing:border-box;outline:none;">
-                </div>
-                <div style="flex:1;">
-                  <label style="display:block;font-size:11px;color:var(--tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Effective Date</label>
-                  <input type="date" id="newRateDateInput" style="width:100%;background:var(--bg);border:1px solid var(--separator);border-radius:10px;padding:10px;color:var(--label);font-size:15px;font-family:var(--font);box-sizing:border-box;outline:none;">
-                </div>
-              </div>
-              <div style="margin-bottom:12px;">
-                <label style="display:block;font-size:11px;color:var(--tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Note (Optional)</label>
-                <input type="text" id="newRateNoteInput" placeholder="e.g. Annual raise" style="width:100%;background:var(--bg);border:1px solid var(--separator);border-radius:10px;padding:10px;color:var(--label);font-size:15px;font-family:var(--font);box-sizing:border-box;outline:none;">
-              </div>
-              <button onclick="saveNewPayRate()" style="width:100%;padding:12px;background:var(--blue);color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:var(--font);">Save New Rate</button>
-              <div style="font-size:12px;color:var(--tertiary);margin-top:8px;line-height:1.4;">This rate applies from the selected date forward. Previous days keep their old rate.</div>
-            </div>
-
-            <!-- Advanced -->
-            <div style="margin-bottom:24px;padding-top:24px;border-top:1px dashed var(--separator);">
-              <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="const d = document.getElementById('advRates'); d.style.display = d.style.display === 'none' ? 'block' : 'none';">
-                <div style="font-size:14px;font-weight:600;color:var(--label);">Advanced Options</div>
-                <span class="material-symbols-outlined" style="font-size:18px;color:var(--tertiary);">expand_more</span>
-              </div>
-              <div id="advRates" style="display:none;margin-top:16px;">
-                <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:8px;">Replace All Rates</div>
-                <div style="display:flex;gap:12px;margin-bottom:12px;">
-                  <div style="flex:1;">
-                    <input type="number" id="replaceRateInput" placeholder="0.00" step="0.5" style="width:100%;background:var(--bg);border:1px solid var(--separator);border-radius:10px;padding:10px;color:var(--label);font-size:15px;font-family:var(--font);box-sizing:border-box;outline:none;">
-                  </div>
-                  <button onclick="confirmReplaceAllRates()" style="padding:0 16px;background:var(--red);color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);">Replace All</button>
-                </div>
-                <div style="font-size:12px;color:var(--tertiary);line-height:1.4;">Updates ALL past and future earnings to this single rate.</div>
-              </div>
-            </div>
-
-            <!-- History List -->
-            <div>
-              <div style="font-size:14px;font-weight:600;color:var(--label);margin-bottom:8px;">Rate History</div>
-              <div id="payRateHistoryContainer" style="background:var(--bg);border-radius:10px;overflow:hidden;border:1px solid var(--separator);">
-                <!-- Rendered dynamically -->
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="s-row">
+        <div class="s-row tap" onclick="openSettingsPage('work-preferences')">
           <div class="s-row-icon green">
-            <span class="material-symbols-outlined" style="font-size:18px;">currency_exchange</span>
+            <span class="material-symbols-outlined" style="font-size:18px;">tune</span>
           </div>
-          <span class="s-lbl">Currency</span>
-          <div class="s-val">
-            <select class="s-select" id="currencySelect" onchange="saveCurrency()">
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="GBP">GBP (£)</option>
-              <option value="INR">INR (₹)</option>
-            </select>
+          <div class="s-stack">
+            <span class="s-lbl">Work Preferences</span>
+            <span class="s-subtext" id="settingsWorkPrefsSummary">USD · Week starts Monday</span>
           </div>
-        </div>
-        <div class="s-row">
-          <div class="s-row-icon orange">
-            <span class="material-symbols-outlined" style="font-size:18px;">calendar_month</span>
-          </div>
-          <span class="s-lbl">Week starts on</span>
-          <div class="s-val">
-            <select class="s-select" id="weekStartSelect" onchange="saveWeekStart()">
-              <option value="monday">Monday</option>
-              <option value="sunday">Sunday</option>
-            </select>
-          </div>
-        </div>
-        <div class="s-row">
-          <div class="s-row-icon" style="background:rgba(234,179,8,0.12);">
-            <span class="material-symbols-outlined" style="font-size:18px;color:#ca8a04;">schedule</span>
-          </div>
-          <span class="s-lbl">Overtime after (hrs/week)</span>
-          <div class="s-val">
-            <input class="s-input" type="number" id="overtimeThresholdInput" value="40" step="1" min="1" max="168" onchange="saveOvertimeThreshold()" style="width:52px;">
-          </div>
-        </div>
-        <div class="s-row">
-          <div class="s-row-icon" style="background:rgba(234,179,8,0.12);">
-            <span class="material-symbols-outlined" style="font-size:18px;color:#ca8a04;">trending_up</span>
-          </div>
-          <span class="s-lbl">Overtime rate (×)</span>
-          <div class="s-val">
-            <input class="s-input" type="number" id="overtimeRateInput" value="1.5" step="0.25" min="1" max="5" onchange="saveOvertimeRate()" style="width:52px;">
-          </div>
+          <span class="material-symbols-outlined s-chev">chevron_right</span>
         </div>
       </div>
     </div>
 
-    <!-- Schedule group -->
     <div class="settings-group">
       <div class="sg-label">Schedule</div>
-      <div class="settings-card" id="dailyScheduleList"></div>
+      <div class="settings-card">
+        <div class="s-row tap" onclick="openSettingsPage('scheduling')">
+          <div class="s-row-icon" style="background:rgba(234,179,8,0.12);">
+            <span class="material-symbols-outlined" style="font-size:18px;color:#ca8a04;">event_available</span>
+          </div>
+          <div class="s-stack">
+            <span class="s-lbl">Scheduling</span>
+            <span class="s-subtext" id="settingsSchedulingSummary">0 days enabled</span>
+          </div>
+          <span class="material-symbols-outlined s-chev">chevron_right</span>
+        </div>
+      </div>
     </div>
 
     <!-- Preferences -->
@@ -1500,20 +1572,6 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
             </select>
           </div>
         </div>
-        <div class="s-row">
-          <div class="s-row-icon" style="background:rgba(234,179,8,0.12);">
-            <span class="material-symbols-outlined" style="font-size:18px;color:#ca8a04;">trending_up</span>
-          </div>
-          <span class="s-lbl">Show Overtime Indicator</span>
-          <div class="s-val">
-            <label style="position:relative;display:inline-block;width:51px;height:31px;">
-              <input type="checkbox" id="overtimeBarToggle" onchange="saveOvertimeBarPref(this.checked)" style="opacity:0;width:0;height:0;">
-              <span id="overtimeBarToggleTrack" style="position:absolute;cursor:pointer;inset:0;background:var(--fill);border-radius:31px;transition:background 0.2s;">
-                <span id="overtimeBarToggleThumb" style="position:absolute;height:27px;width:27px;left:2px;bottom:2px;background:white;border-radius:50%;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>
-              </span>
-            </label>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -1521,76 +1579,342 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
     <div class="settings-group">
       <div class="sg-label">Data Management</div>
       <div class="settings-card">
-        <!-- Export as CSV (collapsible) -->
-        <div class="s-row tap" id="exportCsvRow" onclick="toggleDataSubmenu('exportCsvMenu','exportCsvRow')">
+        <div class="s-row tap" onclick="openSettingsPage('export-csv')">
           <div class="s-row-icon blue"><span class="material-symbols-outlined" style="font-size:18px;">file_download</span></div>
-          <span class="s-lbl">Export as CSV</span>
-          <span class="material-symbols-outlined s-chev-expand">chevron_right</span>
+          <div class="s-stack">
+            <span class="s-lbl">Export CSV</span>
+            <span class="s-subtext">Week, month, or custom range</span>
+          </div>
+          <span class="material-symbols-outlined s-chev">chevron_right</span>
         </div>
-        <div class="s-submenu" id="exportCsvMenu">
-          <div class="s-subrow" onclick="exportCSV()">
-            <div class="s-subrow-icon blue"><span class="material-symbols-outlined" style="font-size:15px;">calendar_view_week</span></div>
-            <span class="s-subrow-lbl">Current week</span>
-            <span class="material-symbols-outlined s-subrow-chev">download</span>
-          </div>
-          <div class="s-subrow" onclick="exportMonthCSV()">
-            <div class="s-subrow-icon blue"><span class="material-symbols-outlined" style="font-size:15px;">calendar_month</span></div>
-            <span class="s-subrow-lbl">Current month</span>
-            <span class="material-symbols-outlined s-subrow-chev">download</span>
-          </div>
-          <div class="s-subrow" onclick="exportCustomRangeCSV()">
-            <div class="s-subrow-icon slate"><span class="material-symbols-outlined" style="font-size:15px;">date_range</span></div>
-            <span class="s-subrow-lbl">Custom date range</span>
-            <span class="material-symbols-outlined s-subrow-chev">download</span>
-          </div>
-        </div>
-
-        <!-- Print Timesheet (collapsible) -->
-        <div class="s-row tap" id="printSheetRow" onclick="toggleDataSubmenu('printSheetMenu','printSheetRow')">
+        <div class="s-row tap" onclick="openSettingsPage('print-timesheet')">
           <div class="s-row-icon slate"><span class="material-symbols-outlined" style="font-size:18px;">print</span></div>
-          <span class="s-lbl">Print Timesheet</span>
-          <span class="material-symbols-outlined s-chev-expand">chevron_right</span>
+          <div class="s-stack">
+            <span class="s-lbl">Print Timesheet</span>
+            <span class="s-subtext">Week, month, or custom range</span>
+          </div>
+          <span class="material-symbols-outlined s-chev">chevron_right</span>
         </div>
-        <div class="s-submenu" id="printSheetMenu">
-          <div class="s-subrow" onclick="printTimesheet()">
-            <div class="s-subrow-icon slate"><span class="material-symbols-outlined" style="font-size:15px;">calendar_view_week</span></div>
-            <span class="s-subrow-lbl">Week</span>
-            <span class="material-symbols-outlined s-subrow-chev">chevron_right</span>
-          </div>
-          <div class="s-subrow" onclick="printMonthTimesheet()">
-            <div class="s-subrow-icon slate"><span class="material-symbols-outlined" style="font-size:15px;">calendar_month</span></div>
-            <span class="s-subrow-lbl">Month</span>
-            <span class="material-symbols-outlined s-subrow-chev">chevron_right</span>
-          </div>
-          <div class="s-subrow" onclick="printCustomTimesheet()">
-            <div class="s-subrow-icon slate"><span class="material-symbols-outlined" style="font-size:15px;">date_range</span></div>
-            <span class="s-subrow-lbl">Custom date range</span>
-            <span class="material-symbols-outlined s-subrow-chev">chevron_right</span>
-          </div>
-        </div>
-
-        <div class="s-row tap" onclick="exportBackup()">
+        <div class="s-row tap" onclick="openSettingsPage('backup-restore')">
           <div class="s-row-icon amber"><span class="material-symbols-outlined" style="font-size:18px;">backup</span></div>
-          <span class="s-lbl">Backup all data as JSON</span>
-          <span class="material-symbols-outlined s-chev" style="font-size:18px;color:var(--outline);">download</span>
-        </div>
-        <div class="s-row tap" onclick="document.getElementById('backupFileInput').click()">
-          <div class="s-row-icon amber"><span class="material-symbols-outlined" style="font-size:18px;">restore</span></div>
-          <span class="s-lbl">Restore backup file</span>
-          <span class="material-symbols-outlined s-chev" style="font-size:18px;color:var(--outline);">upload</span>
-        </div>
-        <div class="s-row">
-          <div class="s-row-icon slate"><span class="material-symbols-outlined" style="font-size:18px;">history</span></div>
-          <span class="s-lbl">Last backup</span>
-          <span id="lastBackupText" style="color:var(--tertiary);font-size:14px;font-weight:500;">Never</span>
-        </div>
-        <div class="s-row tap" onclick="clearAll()">
-          <div class="s-row-icon red"><span class="material-symbols-outlined" style="font-size:18px;">delete_forever</span></div>
-          <span class="s-lbl" style="color:var(--red);">Clear All Data</span>
-          <span class="material-symbols-outlined" style="font-size:16px;color:var(--red);">warning</span>
+          <div class="s-stack">
+            <span class="s-lbl">Backup &amp; Restore</span>
+            <span class="s-subtext" id="settingsBackupSummary">JSON backup and restore</span>
+          </div>
+          <span class="material-symbols-outlined s-chev">chevron_right</span>
         </div>
       </div>
-      <input type="file" id="backupFileInput" accept="application/json,.json" style="display:none" onchange="importBackup(event)">
+    </div>
+    </div>
+
+    <div class="settings-detail-view settings-detail-anim" id="settingsPage-profile" data-settings-page="profile">
+      <div class="settings-detail-header">
+        <button class="settings-detail-back" type="button" data-settings-back aria-label="Back" onclick="closeSettingsPage()">
+          <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+          <span>Back</span>
+        </button>
+        <div class="settings-detail-title">Edit Profile</div>
+        <button class="settings-detail-back settings-detail-back-ghost" type="button" tabindex="-1" aria-hidden="true">Back</button>
+      </div>
+      <div class="settings-detail-content">
+        <div class="settings-card">
+          <div class="settings-detail-card">
+            <div class="settings-field">
+              <label class="settings-field-label">Display Name</label>
+              <input class="settings-text-input" type="text" id="profileNameInput" placeholder="User" oninput="saveProfile()">
+            </div>
+            <div class="settings-field">
+              <label class="settings-field-label">Initials, Emoji, or Image URL</label>
+              <input class="settings-text-input" type="text" id="profileAvatarInput" placeholder="U" oninput="saveProfile()">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-detail-view settings-detail-anim" id="settingsPage-pay-rates" data-settings-page="pay-rates">
+      <div class="settings-detail-header">
+        <button class="settings-detail-back" type="button" data-settings-back aria-label="Back" onclick="closeSettingsPage()">
+          <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+          <span>Back</span>
+        </button>
+        <div class="settings-detail-title">Pay Rates</div>
+        <button class="settings-detail-back settings-detail-back-ghost" type="button" tabindex="-1" aria-hidden="true">Back</button>
+      </div>
+      <div class="settings-detail-content">
+        <div class="settings-card">
+          <div class="settings-detail-card">
+            <div class="settings-section-title">Add Pay Increase</div>
+            <div class="settings-input-grid">
+              <div class="settings-input-col">
+                <label class="settings-field-label">New Rate</label>
+                <input class="settings-text-input" type="number" id="newRateInput" placeholder="0.00" step="0.5">
+              </div>
+              <div class="settings-input-col">
+                <label class="settings-field-label">Effective Date</label>
+                <input class="settings-text-input" type="date" id="newRateDateInput">
+              </div>
+            </div>
+            <div class="settings-field">
+              <label class="settings-field-label">Note (Optional)</label>
+              <input class="settings-text-input" type="text" id="newRateNoteInput" placeholder="e.g. Annual raise">
+            </div>
+            <button class="settings-primary-btn" type="button" onclick="saveNewPayRate()">Save New Rate</button>
+            <div class="settings-section-note">This rate applies from the selected date forward. Previous days keep their old rate.</div>
+
+            <div class="settings-section-divider">
+              <div class="settings-history-card">
+                <div class="s-row tap" onclick="openSettingsPage('replace-rates')">
+                  <div class="s-row-icon red">
+                    <span class="material-symbols-outlined" style="font-size:18px;">warning</span>
+                  </div>
+                  <div class="s-stack">
+                    <span class="s-lbl">Replace All Rates</span>
+                    <span class="s-subtext">Use only if your historical rate was entered incorrectly</span>
+                  </div>
+                  <span class="material-symbols-outlined s-chev">chevron_right</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="settings-section-title compact">Rate History</div>
+              <div class="settings-history-card" id="payRateHistoryContainer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-detail-view settings-detail-anim" id="settingsPage-replace-rates" data-settings-page="replace-rates">
+      <div class="settings-detail-header">
+        <button class="settings-detail-back" type="button" data-settings-back aria-label="Back" onclick="closeSettingsPage()">
+          <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+          <span>Back</span>
+        </button>
+        <div class="settings-detail-title">Replace All Rates</div>
+        <button class="settings-detail-back settings-detail-back-ghost" type="button" tabindex="-1" aria-hidden="true">Back</button>
+      </div>
+      <div class="settings-detail-content">
+        <div class="settings-card">
+          <div class="settings-detail-card">
+            <div class="settings-section-title" style="color:var(--red);">Danger Zone</div>
+            <div class="settings-section-note" style="margin-top:0;margin-bottom:16px;">This recalculates all past and future earnings using one single hourly rate.</div>
+            <div class="settings-field">
+              <label class="settings-field-label">Replacement Rate</label>
+              <input class="settings-text-input" type="number" id="replaceRateInput" placeholder="0.00" step="0.5">
+            </div>
+            <button class="settings-danger-btn" type="button" onclick="confirmReplaceAllRates()">Replace All Rates</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-detail-view settings-detail-anim" id="settingsPage-work-preferences" data-settings-page="work-preferences">
+      <div class="settings-detail-header">
+        <button class="settings-detail-back" type="button" data-settings-back aria-label="Back" onclick="closeSettingsPage()">
+          <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+          <span>Back</span>
+        </button>
+        <div class="settings-detail-title">Work Preferences</div>
+        <button class="settings-detail-back settings-detail-back-ghost" type="button" tabindex="-1" aria-hidden="true">Back</button>
+      </div>
+      <div class="settings-detail-content">
+        <div class="settings-card">
+          <div class="s-row">
+            <div class="s-row-icon green">
+              <span class="material-symbols-outlined" style="font-size:18px;">currency_exchange</span>
+            </div>
+            <span class="s-lbl">Currency</span>
+            <div class="s-val">
+              <select class="s-select" id="currencySelect" onchange="saveCurrency()">
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="INR">INR (₹)</option>
+              </select>
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-icon orange">
+              <span class="material-symbols-outlined" style="font-size:18px;">calendar_month</span>
+            </div>
+            <span class="s-lbl">Week starts on</span>
+            <div class="s-val">
+              <select class="s-select" id="weekStartSelect" onchange="saveWeekStart()">
+                <option value="monday">Monday</option>
+                <option value="sunday">Sunday</option>
+              </select>
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-icon" style="background:rgba(234,179,8,0.12);">
+              <span class="material-symbols-outlined" style="font-size:18px;color:#ca8a04;">schedule</span>
+            </div>
+            <span class="s-lbl">Overtime after (hrs/week)</span>
+            <div class="s-val">
+              <input class="s-input" type="number" id="overtimeThresholdInput" value="40" step="1" min="1" max="168" onchange="saveOvertimeThreshold()" style="width:52px;">
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-icon" style="background:rgba(234,179,8,0.12);">
+              <span class="material-symbols-outlined" style="font-size:18px;color:#ca8a04;">trending_up</span>
+            </div>
+            <span class="s-lbl">Overtime rate (×)</span>
+            <div class="s-val">
+              <input class="s-input" type="number" id="overtimeRateInput" value="1.5" step="0.25" min="1" max="5" onchange="saveOvertimeRate()" style="width:52px;">
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-icon" style="background:rgba(234,179,8,0.12);">
+              <span class="material-symbols-outlined" style="font-size:18px;color:#ca8a04;">bar_chart</span>
+            </div>
+            <span class="s-lbl">Show Overtime Progress</span>
+            <div class="s-val">
+              <label style="position:relative;display:inline-block;width:51px;height:31px;">
+                <input type="checkbox" id="overtimeBarToggle" onchange="saveOvertimeBarPref(this.checked)" style="opacity:0;width:0;height:0;">
+                <span id="overtimeBarToggleTrack" style="position:absolute;cursor:pointer;inset:0;background:var(--fill);border-radius:31px;transition:background 0.2s;">
+                  <span id="overtimeBarToggleThumb" style="position:absolute;height:27px;width:27px;left:2px;bottom:2px;background:white;border-radius:50%;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-detail-view settings-detail-anim" id="settingsPage-scheduling" data-settings-page="scheduling">
+      <div class="settings-detail-header">
+        <button class="settings-detail-back" type="button" data-settings-back aria-label="Back" onclick="closeSettingsPage()">
+          <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+          <span>Back</span>
+        </button>
+        <div class="settings-detail-title">Scheduling</div>
+        <button class="settings-detail-back settings-detail-back-ghost" type="button" tabindex="-1" aria-hidden="true">Back</button>
+      </div>
+      <div class="settings-detail-content">
+        <div class="settings-card" id="dailyScheduleList"></div>
+      </div>
+    </div>
+
+    <div class="settings-detail-view settings-detail-anim" id="settingsPage-export-csv" data-settings-page="export-csv">
+      <div class="settings-detail-header">
+        <button class="settings-detail-back" type="button" data-settings-back aria-label="Back" onclick="closeSettingsPage()">
+          <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+          <span>Back</span>
+        </button>
+        <div class="settings-detail-title">Export CSV</div>
+        <button class="settings-detail-back settings-detail-back-ghost" type="button" tabindex="-1" aria-hidden="true">Back</button>
+      </div>
+      <div class="settings-detail-content">
+        <div class="settings-card">
+          <div class="s-row tap" onclick="exportCSV()">
+            <div class="s-row-icon blue"><span class="material-symbols-outlined" style="font-size:18px;">calendar_view_week</span></div>
+            <div class="s-stack">
+              <span class="s-lbl">Current week</span>
+              <span class="s-subtext">Download this week as CSV</span>
+            </div>
+            <span class="material-symbols-outlined s-chev">download</span>
+          </div>
+          <div class="s-row tap" onclick="exportMonthCSV()">
+            <div class="s-row-icon blue"><span class="material-symbols-outlined" style="font-size:18px;">calendar_month</span></div>
+            <div class="s-stack">
+              <span class="s-lbl">Current month</span>
+              <span class="s-subtext">Export the month currently in view</span>
+            </div>
+            <span class="material-symbols-outlined s-chev">download</span>
+          </div>
+          <div class="s-row tap" onclick="exportCustomRangeCSV()">
+            <div class="s-row-icon slate"><span class="material-symbols-outlined" style="font-size:18px;">date_range</span></div>
+            <div class="s-stack">
+              <span class="s-lbl">Custom date range</span>
+              <span class="s-subtext">Choose a range and export it as CSV</span>
+            </div>
+            <span class="material-symbols-outlined s-chev">download</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-detail-view settings-detail-anim" id="settingsPage-print-timesheet" data-settings-page="print-timesheet">
+      <div class="settings-detail-header">
+        <button class="settings-detail-back" type="button" data-settings-back aria-label="Back" onclick="closeSettingsPage()">
+          <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+          <span>Back</span>
+        </button>
+        <div class="settings-detail-title">Print Timesheet</div>
+        <button class="settings-detail-back settings-detail-back-ghost" type="button" tabindex="-1" aria-hidden="true">Back</button>
+      </div>
+      <div class="settings-detail-content">
+        <div class="settings-card">
+          <div class="s-row tap" onclick="printTimesheet()">
+            <div class="s-row-icon slate"><span class="material-symbols-outlined" style="font-size:18px;">calendar_view_week</span></div>
+            <div class="s-stack">
+              <span class="s-lbl">Week</span>
+              <span class="s-subtext">Print the current week view</span>
+            </div>
+            <span class="material-symbols-outlined s-chev">chevron_right</span>
+          </div>
+          <div class="s-row tap" onclick="printMonthTimesheet()">
+            <div class="s-row-icon slate"><span class="material-symbols-outlined" style="font-size:18px;">calendar_month</span></div>
+            <div class="s-stack">
+              <span class="s-lbl">Month</span>
+              <span class="s-subtext">Print the current month view</span>
+            </div>
+            <span class="material-symbols-outlined s-chev">chevron_right</span>
+          </div>
+          <div class="s-row tap" onclick="printCustomTimesheet()">
+            <div class="s-row-icon slate"><span class="material-symbols-outlined" style="font-size:18px;">date_range</span></div>
+            <div class="s-stack">
+              <span class="s-lbl">Custom date range</span>
+              <span class="s-subtext">Choose a range before printing</span>
+            </div>
+            <span class="material-symbols-outlined s-chev">chevron_right</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-detail-view settings-detail-anim" id="settingsPage-backup-restore" data-settings-page="backup-restore">
+      <div class="settings-detail-header">
+        <button class="settings-detail-back" type="button" data-settings-back aria-label="Back" onclick="closeSettingsPage()">
+          <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+          <span>Back</span>
+        </button>
+        <div class="settings-detail-title">Backup &amp; Restore</div>
+        <button class="settings-detail-back settings-detail-back-ghost" type="button" tabindex="-1" aria-hidden="true">Back</button>
+      </div>
+      <div class="settings-detail-content">
+        <div class="settings-card">
+          <div class="s-row tap" onclick="exportBackup()">
+            <div class="s-row-icon amber"><span class="material-symbols-outlined" style="font-size:18px;">backup</span></div>
+            <div class="s-stack">
+              <span class="s-lbl">Backup all data as JSON</span>
+              <span class="s-subtext">Save a full backup file locally</span>
+            </div>
+            <span class="material-symbols-outlined s-chev">download</span>
+          </div>
+          <div class="s-row tap" onclick="document.getElementById('backupFileInput').click()">
+            <div class="s-row-icon amber"><span class="material-symbols-outlined" style="font-size:18px;">restore</span></div>
+            <div class="s-stack">
+              <span class="s-lbl">Restore backup file</span>
+              <span class="s-subtext">Replace current data from a JSON backup</span>
+            </div>
+            <span class="material-symbols-outlined s-chev">upload</span>
+          </div>
+          <div class="s-row">
+            <div class="s-row-icon slate"><span class="material-symbols-outlined" style="font-size:18px;">history</span></div>
+            <span class="s-lbl">Last backup</span>
+            <span id="lastBackupText" style="color:var(--tertiary);font-size:14px;font-weight:500;">Never</span>
+          </div>
+          <div class="s-row tap" onclick="clearAll()">
+            <div class="s-row-icon red"><span class="material-symbols-outlined" style="font-size:18px;">delete_forever</span></div>
+            <span class="s-lbl" style="color:var(--red);">Clear All Data</span>
+            <span class="material-symbols-outlined" style="font-size:16px;color:var(--red);">warning</span>
+          </div>
+        </div>
+        <input type="file" id="backupFileInput" accept="application/json,.json" style="display:none" onchange="importBackup(event)">
+      </div>
     </div>
 
   </div>

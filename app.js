@@ -130,6 +130,7 @@ let payRates = []; // loaded by loadPayRates() + migratePayRates() after functio
 let currency = localStorage.getItem('ht_currency') || 'USD';
 let profileName = localStorage.getItem('ht_profile_name') || 'User';
 let profileAvatar = localStorage.getItem('ht_profile_avatar') || 'U';
+let activeSettingsPage = 'home';
 let clockedIn = false;
 let clockInTime = null;
 let clockInKey = null;
@@ -1173,6 +1174,195 @@ function calcSessionMins(session) {
   return getSessionMins(editKey || '', session);
 }
 
+function getEnabledScheduleCount() {
+  if (!dailySchedule) return 0;
+  return Object.values(dailySchedule).reduce((count, sched) => count + (sched && sched.enabled ? 1 : 0), 0);
+}
+
+function getSettingsHistoryPage(state) {
+  return state && typeof state === 'object' && typeof state.__htSettingsPage === 'string'
+    ? state.__htSettingsPage
+    : 'home';
+}
+
+function getSettingsDetailBackButton(pageName) {
+  const page = pageName && pageName !== 'home'
+    ? document.getElementById(`settingsPage-${pageName}`)
+    : document.querySelector('.settings-detail-view.active');
+  return page ? page.querySelector('[data-settings-back]') : null;
+}
+
+function focusSettingsDetail(pageName) {
+  const backButton = getSettingsDetailBackButton(pageName);
+  if (!backButton) return;
+  requestAnimationFrame(() => {
+    try {
+      backButton.focus({ preventScroll: true });
+    } catch (e) {
+      backButton.focus();
+    }
+  });
+}
+
+function formatSettingsWeekStart() {
+  return weekStartsOnMonday() ? 'Monday' : 'Sunday';
+}
+
+function getWorkPreferencesSummary() {
+  return `${currency} · Week starts ${formatSettingsWeekStart()}`;
+}
+
+function getSchedulingSummary() {
+  const orderedDays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+  const enabledDays = orderedDays.filter(day => dailySchedule[day] && dailySchedule[day].enabled);
+  const enabledCount = enabledDays.length;
+  if (!enabledCount) return 'No days enabled';
+
+  const sameTime = enabledDays.every(day => {
+    const first = dailySchedule[enabledDays[0]];
+    const current = dailySchedule[day];
+    return current.start === first.start && current.end === first.end;
+  });
+
+  if (sameTime) {
+    const { start, end } = dailySchedule[enabledDays[0]];
+    const timeSummary = `${fmt12(start)} - ${fmt12(end)}`;
+    if (enabledCount === 7) return `Every day · ${timeSummary}`;
+    const weekdays = ['monday','tuesday','wednesday','thursday','friday'];
+    const weekdaysOnly = weekdays.every(day => enabledDays.includes(day)) &&
+      !enabledDays.includes('saturday') &&
+      !enabledDays.includes('sunday');
+    if (enabledCount === 5 && weekdaysOnly) return `Mon-Fri · ${timeSummary}`;
+  }
+
+  return `${enabledCount} day${enabledCount === 1 ? '' : 's'} enabled`;
+}
+
+function applySettingsPage(pageName, options = {}) {
+  const { focus = false } = options;
+  const settingsPage = $('page-settings');
+  const homeView = $('settingsHomeView');
+  const detailViews = document.querySelectorAll('.settings-detail-view');
+  const nextPage = pageName && pageName !== 'home' ? pageName : 'home';
+
+  activeSettingsPage = nextPage;
+  if (nextPage === 'home') {
+    if (settingsPage) settingsPage.classList.remove('settings-detail-open');
+    if (homeView) homeView.classList.remove('hidden');
+    detailViews.forEach(view => view.classList.remove('active'));
+    syncSettingsHomeControls();
+    updateSettingsHomeSummaries();
+    return;
+  }
+
+  const target = document.getElementById(`settingsPage-${nextPage}`);
+  if (!settingsPage || !homeView || !target) return;
+  settingsPage.classList.add('settings-detail-open');
+  homeView.classList.add('hidden');
+  detailViews.forEach(view => view.classList.remove('active'));
+  target.classList.add('active');
+  renderSettingsPage(nextPage);
+  window.scrollTo(0, 0);
+  if (focus) focusSettingsDetail(nextPage);
+}
+
+function syncSettingsHomeControls() {
+  const rateInput = $('rateInput');
+  const rateSym = $('rateSym');
+  const currencySelect = $('currencySelect');
+  const weekStartSelect = $('weekStartSelect');
+  const overtimeThresholdInput = $('overtimeThresholdInput');
+  const overtimeRateInput = $('overtimeRateInput');
+  const profileNameInput = $('profileNameInput');
+  const profileAvatarInput = $('profileAvatarInput');
+
+  if (rateInput) rateInput.value = hourlyRate.toFixed(2);
+  if (rateSym) rateSym.textContent = curSym();
+  if (currencySelect) currencySelect.value = currency;
+  if (weekStartSelect) weekStartSelect.value = weekStartsOnMonday() ? 'monday' : 'sunday';
+  if (overtimeThresholdInput) overtimeThresholdInput.value = overtimeThresholdHours;
+  if (overtimeRateInput) overtimeRateInput.value = overtimeRate;
+  if (profileNameInput) profileNameInput.value = profileName;
+  if (profileAvatarInput) profileAvatarInput.value = profileAvatar;
+
+  applyTheme();
+
+  const overtimeToggle = $('overtimeBarToggle');
+  const overtimeTrack = $('overtimeBarToggleTrack');
+  const overtimeThumb = $('overtimeBarToggleThumb');
+  if (overtimeToggle) overtimeToggle.checked = showOvertimeBar;
+  if (overtimeTrack) overtimeTrack.style.background = showOvertimeBar ? '#ca8a04' : 'var(--fill)';
+  if (overtimeThumb) overtimeThumb.style.left = showOvertimeBar ? '22px' : '2px';
+}
+
+function updateSettingsHomeSummaries() {
+  const profileSummary = $('settingsProfileSummary');
+  if (profileSummary) profileSummary.textContent = profileName || 'User';
+
+  const workPrefsSummary = $('settingsWorkPrefsSummary');
+  if (workPrefsSummary) workPrefsSummary.textContent = getWorkPreferencesSummary();
+
+  const scheduleSummary = $('settingsSchedulingSummary');
+  if (scheduleSummary) scheduleSummary.textContent = getSchedulingSummary();
+
+  const backupSummary = $('settingsBackupSummary');
+  if (backupSummary) {
+    const backupText = formatBackupDate(localStorage.getItem('ht_lastBackupAt'));
+    backupSummary.textContent = backupText === 'Never' ? 'JSON backup and restore' : backupText;
+  }
+}
+
+function renderSettingsPage(pageName) {
+  syncSettingsHomeControls();
+  if (pageName === 'profile') return;
+  if (pageName === 'pay-rates') {
+    renderPayRateHistorySettings();
+    return;
+  }
+  if (pageName === 'scheduling') {
+    renderDailyScheduleSettings();
+    return;
+  }
+  if (pageName === 'backup-restore') {
+    updateBackupStatus();
+  }
+}
+
+function openSettingsPage(pageName, options = {}) {
+  const { updateHistory = true, focus = true } = options;
+  if (!pageName || !document.getElementById(`settingsPage-${pageName}`)) return;
+
+  const currentHistoryPage = getSettingsHistoryPage(history.state);
+  if (updateHistory && currentHistoryPage !== pageName) {
+    const nextState = history.state && typeof history.state === 'object'
+      ? { ...history.state, __htSettingsPage: pageName }
+      : { __htSettingsPage: pageName };
+    history.pushState(nextState, '');
+  }
+
+  applySettingsPage(pageName, { focus });
+}
+
+function closeSettingsPage(skipHistory) {
+  const shouldSkipHistory = skipHistory === true;
+  const currentHistoryPage = getSettingsHistoryPage(history.state);
+  if (!shouldSkipHistory && activeSettingsPage !== 'home' && currentHistoryPage !== 'home') {
+    history.back();
+    return;
+  }
+  applySettingsPage('home', { focus: false });
+}
+
+function handleSettingsPopState(event) {
+  const nextPage = getSettingsHistoryPage(event.state);
+  const settingsVisible = $('page-settings') && $('page-settings').classList.contains('active');
+  if (settingsVisible) {
+    applySettingsPage(nextPage, { focus: nextPage !== 'home' });
+    return;
+  }
+  activeSettingsPage = nextPage;
+}
+
 function switchTab(name) {
   ['tracker','calendar','clock','settings'].forEach(n => {
     document.getElementById('page-'+n).classList.remove('active');
@@ -1187,13 +1377,9 @@ function switchTab(name) {
   if (name === 'calendar') renderCalendar();
   if (name === 'clock') renderClockPage();
   if (name === 'settings') {
-    document.getElementById('rateInput').value = hourlyRate.toFixed(2);
-    const nIn = document.getElementById('profileNameInput');
-    const aIn = document.getElementById('profileAvatarInput');
-    if (nIn) nIn.value = profileName;
-    if (aIn) aIn.value = profileAvatar;
-    renderDailyScheduleSettings();
-    renderPayRateHistorySettings();
+    syncSettingsHomeControls();
+    updateSettingsHomeSummaries();
+    applySettingsPage(activeSettingsPage, { focus: false });
   }
   // Hide floating week nav when not on tracker tab
   const floatNav = document.getElementById('floatWeekNav');
@@ -2433,6 +2619,7 @@ function saveCurrency() {
   currency = $('currencySelect').value || 'USD';
   localStorage.setItem('ht_currency', currency);
   $('rateSym').textContent = curSym();
+  updateSettingsHomeSummaries();
   renderWeek();
   if ($('page-calendar').classList.contains('active')) renderCalendar();
   if ($('page-clock').classList.contains('active')) renderClockPage();
@@ -2451,6 +2638,7 @@ function applyProfile() {
       heroAvatar.textContent = profileAvatar.substring(0, 2);
     }
   }
+  updateSettingsHomeSummaries();
 }
 
 function saveProfile() {
@@ -2471,6 +2659,7 @@ function saveWeekStart() {
   const v = $('weekStartSelect').value || 'monday';
   localStorage.setItem('ht_weekStart', v);
   weekOffset = 0;
+  updateSettingsHomeSummaries();
   renderWeek();
   if ($('page-calendar').classList.contains('active')) renderCalendar();
 }
@@ -2480,6 +2669,7 @@ function saveOvertimeThreshold() {
   overtimeThresholdHours = Math.max(1, Math.min(168, v));
   $('overtimeThresholdInput').value = overtimeThresholdHours;
   localStorage.setItem('ht_overtime_threshold', overtimeThresholdHours);
+  updateSettingsHomeSummaries();
   renderWeek();
 }
 
@@ -2488,6 +2678,7 @@ function saveOvertimeRate() {
   overtimeRate = Math.max(1, Math.min(5, v));
   $('overtimeRateInput').value = overtimeRate;
   localStorage.setItem('ht_overtime_rate', overtimeRate);
+  updateSettingsHomeSummaries();
   renderWeek();
 }
 
@@ -2517,6 +2708,11 @@ function savePayRates() {
     hourlyRate = latest.rate;
     localStorage.setItem('ht_rate', hourlyRate);
   }
+  const rateInput = $('rateInput');
+  const rateSym = $('rateSym');
+  if (rateInput) rateInput.value = hourlyRate.toFixed(2);
+  if (rateSym) rateSym.textContent = curSym();
+  updateSettingsHomeSummaries();
 }
 
 function migratePayRates() {
@@ -2604,6 +2800,46 @@ function moneyForDay(dayKey, workedMinsOverride) {
 function moneyForWeek(days) {
   const amount = weekEarningsAmount(days);
   return amount > 0 ? `${curSym()}${amount.toFixed(2)}` : '';
+}
+
+function getEarningsBreakdownForDays(days, filters) {
+  const thresholdMins = overtimeThresholdHours * 60;
+  let cumMins = 0;
+  let regularEarn = 0;
+  let otEarn = 0;
+  let otMins = 0;
+
+  filters = filters || { clientId: selectedClientFilter, projectId: selectedProjectFilter };
+  for (const d of days) {
+    const key = typeof d === 'string' ? d : dk(d);
+    const worked = getWorkedMinsForDay(key, filters);
+    if (!(worked > 0)) continue;
+
+    const rate = getRateForDate(key);
+    if (!(rate > 0)) {
+      cumMins += worked;
+      continue;
+    }
+
+    let regularPortion = worked;
+    let otPortion = 0;
+    if (overtimeThresholdHours > 0 && (cumMins + worked) > thresholdMins) {
+      regularPortion = Math.max(0, thresholdMins - cumMins);
+      otPortion = worked - regularPortion;
+    }
+
+    regularEarn += rate * regularPortion / 60;
+    otEarn += rate * overtimeRate * otPortion / 60;
+    otMins += otPortion;
+    cumMins += worked;
+  }
+
+  return {
+    totalEarn: regularEarn + otEarn,
+    regularEarn,
+    otEarn,
+    otMins
+  };
 }
 
 // Numeric weekly earnings with per-day rates + overtime.
@@ -2696,6 +2932,7 @@ async function confirmReplaceAllRates() {
   renderPayRateHistorySettings();
   renderWeek();
   if (document.getElementById('page-calendar').classList.contains('active')) renderCalendar();
+  if (activeSettingsPage === 'replace-rates') closeSettingsPage();
   showExportToast('All rates replaced');
 }
 
@@ -2910,8 +3147,10 @@ function formatBackupDate(iso) {
 
 function updateBackupStatus() {
   const el = $('lastBackupText');
-  if (!el) return;
-  el.textContent = formatBackupDate(localStorage.getItem('ht_lastBackupAt'));
+  const formatted = formatBackupDate(localStorage.getItem('ht_lastBackupAt'));
+  if (el) el.textContent = formatted;
+  const summary = $('settingsBackupSummary');
+  if (summary) summary.textContent = formatted === 'Never' ? 'JSON backup and restore' : formatted;
 }
 
 function quickBackup() {
@@ -3135,6 +3374,7 @@ migratePayRates();
 
 function saveDailySchedule() {
   localStorage.setItem('ht_daily_schedule', JSON.stringify(dailySchedule));
+  updateSettingsHomeSummaries();
   if (typeof scheduleShiftNotifications === 'function') scheduleShiftNotifications();
   if (typeof sendSwScheduleUpdate === 'function') sendSwScheduleUpdate();
 }
@@ -3159,25 +3399,25 @@ function renderDailyScheduleSettings() {
     const sched = dailySchedule[day];
     const label = day.charAt(0).toUpperCase() + day.slice(1);
     return `
-      <div class="sched-day-row" style="padding:12px 16px;border-bottom:0.5px solid var(--separator);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${sched.enabled ? '10' : '0'}px;">
-          <span style="font-size:16px;font-weight:500;">${label}</span>
-          <label class="sched-toggle" style="position:relative;display:inline-block;width:51px;height:31px;">
+      <div class="sched-day-row">
+        <div class="sched-day-header${sched.enabled ? ' with-times' : ''}">
+          <span class="sched-day-label">${label}</span>
+          <label class="sched-toggle">
             <input type="checkbox" ${sched.enabled ? 'checked' : ''} onchange="toggleScheduleDay('${day}', this.checked)" style="opacity:0;width:0;height:0;">
-            <span style="position:absolute;cursor:pointer;inset:0;background:${sched.enabled ? 'var(--green)' : 'var(--fill)'};border-radius:31px;transition:background 0.2s;">
-              <span style="position:absolute;height:27px;width:27px;left:${sched.enabled ? '22' : '2'}px;bottom:2px;background:white;border-radius:50%;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>
+            <span class="sched-toggle-track">
+              <span class="sched-toggle-thumb"></span>
             </span>
           </label>
         </div>
         ${sched.enabled ? `
-          <div style="display:flex;gap:12px;">
-            <div style="flex:1;background:var(--bg);border-radius:10px;padding:10px 12px;">
-              <div style="font-size:11px;color:var(--tertiary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">Start</div>
-              <input type="time" value="${sched.start}" onchange="updateScheduleTime('${day}','start',this.value)" style="border:none;outline:none;background:transparent;color:var(--blue);font-family:var(--font);font-size:16px;font-weight:500;width:100%;">
+          <div class="sched-time-grid">
+            <div class="sched-time-card">
+              <div class="sched-time-label">Start</div>
+              <input class="sched-time-input" type="time" value="${sched.start}" onchange="updateScheduleTime('${day}','start',this.value)">
             </div>
-            <div style="flex:1;background:var(--bg);border-radius:10px;padding:10px 12px;">
-              <div style="font-size:11px;color:var(--tertiary);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">End</div>
-              <input type="time" value="${sched.end}" onchange="updateScheduleTime('${day}','end',this.value)" style="border:none;outline:none;background:transparent;color:var(--blue);font-family:var(--font);font-size:16px;font-weight:500;width:100%;">
+            <div class="sched-time-card">
+              <div class="sched-time-label">End</div>
+              <input class="sched-time-input" type="time" value="${sched.end}" onchange="updateScheduleTime('${day}','end',this.value)">
             </div>
           </div>
         ` : ''}
@@ -3343,22 +3583,6 @@ function downloadCSV(csv, filename) {
   }
 }
 
-// ─── Data Management submenu toggle ───
-function toggleDataSubmenu(menuId, rowId) {
-  const menu = document.getElementById(menuId);
-  const row  = document.getElementById(rowId);
-  if (!menu) return;
-  const isOpen = menu.classList.contains('open');
-  // Close all open submenus first
-  document.querySelectorAll('.s-submenu.open').forEach(m => m.classList.remove('open'));
-  document.querySelectorAll('.s-row.expanded').forEach(r => r.classList.remove('expanded'));
-  // Toggle the clicked one
-  if (!isOpen) {
-    menu.classList.add('open');
-    if (row) row.classList.add('expanded');
-  }
-}
-
 // ─── Print-friendly timesheet ───
 function printTimesheet() { exportPDFTimesheet(); }
 
@@ -3385,7 +3609,6 @@ function exportPDFTimesheetForRange(startDate, endDate) {
   let cur = new Date(startDate);
   let totalMins = 0, totalBreak = 0, daysWorked = 0;
   let rows = '';
-  const otThreshMins = overtimeThresholdHours * 60;
   while (cur <= endDate) {
     const key = dk(cur);
     const worked = getWorkedMinsForDay(key, filters);
@@ -3411,8 +3634,7 @@ function exportPDFTimesheetForRange(startDate, endDate) {
   }
   const allDays = [];
   { let _c = new Date(startDate); while (_c <= endDate) { allDays.push(dk(_c)); _c.setDate(_c.getDate()+1); } }
-  const totalEarn = weekEarningsAmount(allDays, filters);
-  const otEarn = 0; // included in totalEarn via weekEarningsAmount
+  const { totalEarn, regularEarn, otEarn, otMins } = getEarningsBreakdownForDays(allDays, filters);
   const avgMins = daysWorked > 0 ? Math.round(totalMins / daysWorked) : 0;
   const label = `${MO[startDate.getMonth()]} ${startDate.getDate()} – ${MO[endDate.getMonth()]} ${endDate.getDate()}, ${startDate.getFullYear()}`;
   const win = window.open('', '_blank');
@@ -3477,7 +3699,6 @@ function exportPDFTimesheet() {
   const first = days[0], last = days[6];
   let totalMins = 0, totalBreak = 0, daysWorked = 0;
   let rows = '';
-  const otThreshMins = overtimeThresholdHours * 60;
 
   days.forEach(d => {
     const key = dk(d);
@@ -3502,8 +3723,7 @@ function exportPDFTimesheet() {
     </tr>`;
   });
 
-  const totalEarn = weekEarningsAmount(days, filters);
-  const otEarn = 0; // included in totalEarn
+  const { totalEarn, regularEarn, otEarn, otMins } = getEarningsBreakdownForDays(days, filters);
   const avgMins = daysWorked > 0 ? Math.round(totalMins / daysWorked) : 0;
 
   const win = window.open('', '_blank');
@@ -3642,11 +3862,10 @@ function applyRestoredBackup(data) {
   }
   persist();
   localStorage.setItem('ht_rate', hourlyRate);
-  $('rateInput').value = hourlyRate.toFixed(2);
-  $('rateSym').textContent = curSym();
-  const curSel = $('currencySelect');
-  if (curSel) curSel.value = currency;
+  syncSettingsHomeControls();
+  updateSettingsHomeSummaries();
   renderPayRateHistorySettings();
+  if (activeSettingsPage !== 'home') renderSettingsPage(activeSettingsPage);
   restoreClockState();
   renderWeek();
   renderClockPage();
@@ -3776,32 +3995,18 @@ function setupClockSlider() {
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   syncCollections();
+  activeSettingsPage = getSettingsHistoryPage(history.state);
   window.addEventListener('pageshow', refreshRunningClockFromStorage);
   window.addEventListener('focus', refreshRunningClockFromStorage);
+  window.addEventListener('popstate', handleSettingsPopState);
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) refreshRunningClockFromStorage();
   });
 
-  $('rateInput').value = hourlyRate.toFixed(2);
-  $('rateSym').textContent = curSym();
-  const _curSel = $('currencySelect');
-  if (_curSel) _curSel.value = currency;
-  const _wkSel = $('weekStartSelect');
-  if (_wkSel) _wkSel.value = weekStartsOnMonday() ? 'monday' : 'sunday';
-  const _otThresh = $('overtimeThresholdInput');
-  if (_otThresh) _otThresh.value = overtimeThresholdHours;
-  const _otRate = $('overtimeRateInput');
-  if (_otRate) _otRate.value = overtimeRate;
-  applyTheme();
   applyProfile();
-  renderDailyScheduleSettings();
-  // Sync overtime bar toggle UI
-  const otToggle = document.getElementById('overtimeBarToggle');
-  const otTrack = document.getElementById('overtimeBarToggleTrack');
-  const otThumb = document.getElementById('overtimeBarToggleThumb');
-  if (otToggle) otToggle.checked = showOvertimeBar;
-  if (otTrack) otTrack.style.background = showOvertimeBar ? '#ca8a04' : 'var(--fill)';
-  if (otThumb) otThumb.style.left = showOvertimeBar ? '22px' : '2px';
+  syncSettingsHomeControls();
+  updateSettingsHomeSummaries();
+  applySettingsPage(activeSettingsPage, { focus: false });
 
   restoreClockState();
   setupClockSlider();
@@ -3956,8 +4161,3 @@ if (typeof module !== 'undefined' && module.exports) {
     }
   };
 }
-
-
-
-
-

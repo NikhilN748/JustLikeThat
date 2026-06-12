@@ -1,9 +1,54 @@
-// Hours Tracker Service Worker — clock & schedule reminders
+// Hours Tracker Service Worker — offline cache + clock & schedule reminders
 const REMINDER_INTERVAL_MS = 60 * 60 * 1000; // check every hour
 const SCHEDULE_CHECK_MS = 30 * 1000; // check schedule every 30s
 
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+// ─── Offline cache ───
+const CACHE_NAME = 'ht-app-v1';
+const PRECACHE_URLS = ['./', './index.html', './app.js', './manifest.json'];
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .catch(() => {}) // precache failure shouldn't block install
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys
+          .filter((key) => key.startsWith('ht-app-') && key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
+  );
+});
+
+// Stale-while-revalidate for same-origin GET requests:
+// serve from cache immediately, refresh the cache in the background.
+self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  e.respondWith(
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.match(req).then((cached) => {
+        const network = fetch(req)
+          .then((res) => {
+            if (res && res.ok) cache.put(req, res.clone());
+            return res;
+          })
+          .catch(() => cached); // offline: fall back to cache
+        return cached || network;
+      })
+    )
+  );
+});
 
 let reminderTimer = null;
 let scheduleTimer = null;

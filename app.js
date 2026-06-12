@@ -84,8 +84,9 @@ async function restoreFromFile() {
     const file = await handle.getFile();
     const text = await file.text();
     const data = JSON.parse(text);
-    if (!data || !data.db) { await iosAlert('Invalid backup file.'); return; }
-    const ok = await iosConfirm('Restore this file? This will replace current data.', { okLabel: 'Restore', danger: true });
+    const check = validateBackupData(data);
+    if (!check.ok) { await iosAlert(check.error, 'Invalid backup'); return; }
+    const ok = await iosConfirm(`Restore this file (${check.entryCount} day${check.entryCount !== 1 ? 's' : ''} of data)? This will replace current data.`, { okLabel: 'Restore', danger: true });
     if (!ok) return;
     applyRestoredBackup(data);
     showExportToast('Restored from file');
@@ -239,9 +240,6 @@ function projectsFromText(text, existingProjects, currentClients) {
       };
     });
 }
-
-function saveMetadataLists() {}
-function renderMetadataSettings() {}
 
 function optionsHtml(items, selectedId, placeholder) {
   const base = [`<option value="">${esc(placeholder)}</option>`];
@@ -433,9 +431,6 @@ function sessionMatchesFilters(session, filters = {}) {
   return true;
 }
 
-function renderProjectSummary() {}
-function getProjectSummaries() { return []; }
-
 function getWeeklyIssues(days) {
   const issues = [];
   let breakFlags = 0;
@@ -575,7 +570,7 @@ function openPayrollReviewSheet() {
     if (!hasAnyData(entry)) return;
     const mins = getWorkedMins(entry, key);
     const status = payrollStatusMeta(getEntryStatus(key));
-    const note = entry.note ? ` • ${entry.note}` : '';
+    const note = entry.note ? ` • ${esc(entry.note)}` : '';
     rows.push(`
       <div class="review-item">
         <div class="review-item-title">${key} • ${status.label}</div>
@@ -609,10 +604,6 @@ function closePayrollReviewSheet() {
 function filteredDaySegments(dayKey, filters = {}) {
   return getDaySessionSegments(dayKey).filter(seg => sessionMatchesFilters(seg.session, filters));
 }
-
-function renderFilterControls() {}
-
-
 
 function sessionMetaText(session) {
   const parts = [];
@@ -1410,34 +1401,56 @@ function switchTab(name) {
     const TABS = ['tracker','calendar','clock','settings'];
     let isDragging = false;
 
+    // While dragging, mark the tab currently under the slider pill so its
+    // label stays readable (white) while every other label keeps its color.
+    function setUnderSlider(index) {
+      TABS.forEach((n, i) => {
+        const btn = document.getElementById('tab-' + n);
+        if (btn) btn.classList.toggle('under-slider', i === index);
+      });
+    }
+
+    function clearDragHighlight() {
+      tabBar.classList.remove('dragging');
+      TABS.forEach(n => {
+        const btn = document.getElementById('tab-' + n);
+        if (btn) btn.classList.remove('under-slider');
+      });
+    }
+
     tabBar.addEventListener('pointerdown', (e) => {
       // Only care about touch or left click
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       isDragging = true;
       slider.classList.add('dragging');
+      tabBar.classList.add('dragging');
+      setUnderSlider(window._activeTabIndex);
       try { tabBar.setPointerCapture(e.pointerId); } catch(err){}
     });
 
     tabBar.addEventListener('pointermove', (e) => {
       if (!isDragging) return;
       const rect = tabBar.getBoundingClientRect();
-      const tabWidth = (rect.width - 16) / 4; 
+      const tabWidth = (rect.width - 16) / 4;
       let rawIndex = (e.clientX - rect.left - 8) / tabWidth;
       rawIndex = Math.max(0, Math.min(3, rawIndex - 0.5));
       slider.style.transform = `translateX(${rawIndex * 100}%)`;
+      // Highlight the tab under the pill's center
+      setUnderSlider(Math.max(0, Math.min(3, Math.round(rawIndex))));
     });
 
     tabBar.addEventListener('pointerup', (e) => {
       if (!isDragging) return;
       isDragging = false;
       slider.classList.remove('dragging');
+      clearDragHighlight();
       try { tabBar.releasePointerCapture(e.pointerId); } catch(err){}
 
       const rect = tabBar.getBoundingClientRect();
       const tabWidth = (rect.width - 16) / 4;
       let newIndex = Math.floor((e.clientX - rect.left - 8) / tabWidth);
       newIndex = Math.max(0, Math.min(3, newIndex));
-      
+
       switchTab(TABS[newIndex]);
     });
 
@@ -1445,6 +1458,7 @@ function switchTab(name) {
       if (!isDragging) return;
       isDragging = false;
       slider.classList.remove('dragging');
+      clearDragHighlight();
       slider.style.transform = `translateX(${window._activeTabIndex * 100}%)`;
     });
   }, 100);
@@ -1586,7 +1600,6 @@ function renderWeek() {
   document.getElementById('avgTxt').textContent = `Avg ${avg ? fmtMins(avg) : '—'} / day`;
   const daysEl = document.getElementById('daysLogged');
   if (daysEl) daysEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;">timer</span> ${logged} day${logged!==1?'s':''} logged${selectedClientFilter || selectedProjectFilter ? ' (filtered)' : ''}`;
-  renderProjectSummary(days, filters);
   renderOvertimeBar(totalMins);
 }
 
@@ -3121,11 +3134,12 @@ function importBackup(event) {
   reader.onload = async function(ev) {
     try {
       const data = JSON.parse(ev.target.result);
-      if (!data || typeof data !== 'object' || !data.db) {
-        await iosAlert('Invalid backup file.');
+      const check = validateBackupData(data);
+      if (!check.ok) {
+        await iosAlert(check.error, 'Invalid backup');
         return;
       }
-      const ok = await iosConfirm('Restore this backup? This will replace current data.', { okLabel: 'Restore', danger: true });
+      const ok = await iosConfirm(`Restore this backup (${check.entryCount} day${check.entryCount !== 1 ? 's' : ''} of data)? This will replace current data.`, { okLabel: 'Restore', danger: true });
       if (!ok) return;
       applyRestoredBackup(data);
       showExportToast('Backup restored');
@@ -3812,6 +3826,35 @@ function exportPDFTimesheet() {
 }
 
 // ─── Apply restored backup (shared logic) ───
+// Validates a parsed backup payload before it is applied.
+// Returns { ok: true, entryCount } or { ok: false, error }.
+function validateBackupData(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return { ok: false, error: 'Backup file is not a valid backup object.' };
+  }
+  if (!data.db || typeof data.db !== 'object' || Array.isArray(data.db)) {
+    return { ok: false, error: 'Backup file is missing its data section.' };
+  }
+  const badKey = Object.keys(data.db).find(k => !/^\d{4}-\d{2}-\d{2}$/.test(k));
+  if (badKey) {
+    return { ok: false, error: `Backup contains an invalid date key: "${badKey}".` };
+  }
+  for (const [key, entry] of Object.entries(data.db)) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      return { ok: false, error: `Entry for ${key} is not valid.` };
+    }
+    if (entry.sessions != null && !Array.isArray(entry.sessions)) {
+      return { ok: false, error: `Sessions for ${key} are not valid.` };
+    }
+  }
+  for (const field of ['payRates', 'clients', 'projects', 'tags']) {
+    if (data[field] != null && !Array.isArray(data[field])) {
+      return { ok: false, error: `Backup field "${field}" is not valid.` };
+    }
+  }
+  return { ok: true, entryCount: Object.keys(data.db).length };
+}
+
 function applyRestoredBackup(data) {
   db = migrateEntries(data.db || {});
   hourlyRate = parseFloat(data.hourlyRate) || 0;
@@ -3870,8 +3913,6 @@ function applyRestoredBackup(data) {
   renderWeek();
   renderClockPage();
   if ($('page-calendar').classList.contains('active')) renderCalendar();
-  renderFilterControls();
-  renderMetadataSettings();
   localStorage.setItem('ht_lastBackupAt', new Date().toISOString());
   updateBackupStatus();
 }
@@ -4144,8 +4185,13 @@ if (typeof module !== 'undefined' && module.exports) {
     replaceAllRates,
     editPayRate,
     deletePayRate,
+    validateBackupData,
     __setDb(nextDb) {
       db = nextDb || {};
+    },
+    __setRounding(incrementMins, mode) {
+      roundingIncrementMins = incrementMins;
+      roundingMode = mode || 'nearest';
     },
     __getDb() {
       return db;
@@ -4161,3 +4207,4 @@ if (typeof module !== 'undefined' && module.exports) {
     }
   };
 }
+// end of app.js

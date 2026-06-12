@@ -8,6 +8,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Hours">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Hours Tracker</title>
 
 <!-- Inter font + Material Symbols -->
@@ -279,6 +281,13 @@ body {
 .tab-icon { font-size: 22px; line-height: 1; }
 .tab-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
 .tab-btn.active .tab-label { color: #fff; }
+
+/* While dragging, the highlight follows the slider pill instead of the
+   stale .active tab — otherwise the old tab shows white-on-white text. */
+.tab-bar.dragging .tab-btn.active { color: var(--tertiary); transform: none; }
+.tab-bar.dragging .tab-btn.active .tab-label { color: inherit; }
+.tab-bar.dragging .tab-btn.under-slider { color: #fff; transform: scale(1.05); }
+.tab-bar.dragging .tab-btn.under-slider .tab-label { color: #fff; }
 
 /* ═══════════════════════════════════════
    WEEK NAV (inline)

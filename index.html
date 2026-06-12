@@ -1803,6 +1803,17 @@ input:checked + .toggle-track::after { transform: translateX(20px); }
       </div>
       <div class="settings-detail-content">
         <div class="settings-card" id="dailyScheduleList"></div>
+        <div class="settings-section-title">Notifications</div>
+        <div class="settings-card">
+          <div class="s-row tap" onclick="enableNotifications()">
+            <div class="s-row-icon amber"><span class="material-symbols-outlined" style="font-size:18px;">notifications</span></div>
+            <div class="s-stack">
+              <span class="s-lbl">Enable notifications</span>
+              <span class="s-subtext" id="notifStatusText">Get shift &amp; clock-out reminders</span>
+            </div>
+            <span class="material-symbols-outlined s-chev">chevron_right</span>
+          </div>
+        </div>
       </div>
     </div>
 

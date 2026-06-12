@@ -3,7 +3,7 @@ const REMINDER_INTERVAL_MS = 60 * 60 * 1000; // check every hour
 const SCHEDULE_CHECK_MS = 30 * 1000; // check schedule every 30s
 
 // ─── Offline cache ───
-const CACHE_NAME = 'ht-app-v1';
+const CACHE_NAME = 'ht-app-v2';
 const PRECACHE_URLS = ['./', './index.html', './app.js', './manifest.json'];
 
 self.addEventListener('install', (e) => {
@@ -171,7 +171,8 @@ self.addEventListener('notificationclick', (event) => {
       if (clientList.length > 0) {
         clientList[0].focus();
       } else {
-        self.clients.openWindow('/');
+        // Scope-relative: works on GitHub Pages subpaths (/repo-name/), not just '/'
+        self.clients.openWindow(self.registration.scope);
       }
     })
   );

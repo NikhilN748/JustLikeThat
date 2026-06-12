@@ -3183,11 +3183,60 @@ async function requestNotificationPermission() {
   return result === 'granted';
 }
 
+function notificationsGranted() {
+  return ('Notification' in window) && Notification.permission === 'granted';
+}
+
+// Must be called from a user gesture (tap) — iOS installed PWAs ignore
+// permission requests made on page load.
+async function enableNotifications() {
+  if (!('Notification' in window)) {
+    await iosAlert('Notifications are not supported here. On iPhone, open the app from your Home Screen icon (iOS 16.4 or later).', 'Not available');
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    await iosAlert('Notifications are blocked. Enable them in iOS Settings > Notifications > Hours, or in your browser site settings.', 'Blocked');
+    updateNotifStatusText();
+    return;
+  }
+  const granted = await requestNotificationPermission();
+  updateNotifStatusText();
+  if (granted) {
+    scheduleShiftNotifications();
+    sendSwScheduleUpdate();
+    fireNotification('Notifications enabled', 'You will get shift and clock-out reminders here.');
+  } else {
+    await iosAlert('Permission was not granted.', 'Notifications');
+  }
+}
+
+function updateNotifStatusText() {
+  const el = $('notifStatusText');
+  if (!el) return;
+  if (!('Notification' in window)) el.textContent = 'Not supported on this device/browser';
+  else if (Notification.permission === 'granted') el.textContent = 'Enabled ✓';
+  else if (Notification.permission === 'denied') el.textContent = 'Blocked — enable in system settings';
+  else el.textContent = 'Get shift & clock-out reminders';
+}
+
+// Send a real system notification when permitted (shows on the lock screen /
+// notification center). Falls back to the in-app dialog otherwise.
 function fireNotification(title, body) {
+  if (notificationsGranted() && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(reg => {
+      return reg.showNotification(title, {
+        body,
+        icon: 'icon-192.png',
+        badge: 'icon-192.png',
+        tag: 'ht-' + title.replace(/\s/g, '-').toLowerCase()
+      });
+    }).catch(() => { iosAlert(body, title); });
+    return;
+  }
   if (typeof iosAlert === 'function') {
     iosAlert(body, title);
   } else {
-    alert(title + '\\n' + body);
+    alert(title + '\n' + body);
   }
 }
 
@@ -3252,8 +3301,10 @@ function scheduleShiftNotifications() {
 }
 
 async function initNotifications() {
-  const granted = await requestNotificationPermission();
-  if (granted) scheduleShiftNotifications();
+  // Don't request permission on load — iOS installed PWAs require a user
+  // gesture (the "Enable notifications" row in Settings > Scheduling).
+  if (notificationsGranted()) scheduleShiftNotifications();
+  updateNotifStatusText();
   // Register service worker and sync schedule/clock state
   if ('serviceWorker' in navigator) {
     try {
@@ -3438,6 +3489,7 @@ function renderDailyScheduleSettings() {
       </div>
     `;
   }).join('');
+  updateNotifStatusText();
 }
 
 function toggleScheduleDay(day, enabled) {

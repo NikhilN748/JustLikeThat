@@ -672,7 +672,13 @@ function migrateEntries(rawEntries) {
   const clean = {};
   Object.entries(rawEntries || {}).forEach(([key, entry]) => {
     const normalized = normalizeEntry(entry, key);
-    if (normalized.sessions.length || normalized.note) {
+    // Keep the same criteria as setEntry: an entry is meaningful if it has
+    // sessions, a note, a payroll status (submitted/approved/locked), or a
+    // non-work day type. Dropping status-only entries made empty days in a
+    // locked/approved week editable again after a reload or backup restore.
+    const hasMeaningfulStatus = normalized.status && normalized.status !== 'open';
+    const hasDayType = normalized.dayType && normalized.dayType !== 'work';
+    if (normalized.sessions.length || normalized.note || hasMeaningfulStatus || hasDayType) {
       clean[key] = normalized;
     }
   });
@@ -4221,6 +4227,7 @@ if (typeof module !== 'undefined' && module.exports) {
     updateSessionDateTime,
     normalizeEntry,
     normalizeSession,
+    migrateEntries,
     getSessionOverlaps,
     getDayStatus,
     setDayType,

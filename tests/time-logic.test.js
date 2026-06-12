@@ -262,6 +262,40 @@ test('replaceAllRates collapses history to a single rate', () => {
   assert.strictEqual(app.getRateForDate('2026-12-31'), 30);
 });
 
+// ─── Entry migration (load + restore path) ───
+
+test('status-only entries survive migration (locked week with empty days)', () => {
+  const migrated = app.migrateEntries({
+    '2026-04-13': { sessions: [{ in: '09:00', out: '17:00', brk: 0 }], status: 'locked', lockedAt: '2026-04-18T10:00:00Z' },
+    '2026-04-14': { sessions: [], status: 'locked', lockedAt: '2026-04-18T10:00:00Z' },
+    '2026-04-15': { sessions: [], status: 'approved' },
+    '2026-04-16': { sessions: [], status: 'submitted' }
+  });
+  assert.ok(migrated['2026-04-13'], 'day with hours kept');
+  assert.ok(migrated['2026-04-14'], 'empty locked day kept');
+  assert.strictEqual(migrated['2026-04-14'].status, 'locked');
+  assert.strictEqual(migrated['2026-04-14'].lockedAt, '2026-04-18T10:00:00Z');
+  assert.ok(migrated['2026-04-15'], 'empty approved day kept');
+  assert.ok(migrated['2026-04-16'], 'empty submitted day kept');
+});
+
+test('dayType-only entries survive migration (holiday/sick/vacation)', () => {
+  const migrated = app.migrateEntries({
+    '2026-04-17': { sessions: [], dayType: 'holiday' },
+    '2026-04-18': { sessions: [], dayType: 'sick' }
+  });
+  assert.strictEqual(migrated['2026-04-17'].dayType, 'holiday');
+  assert.strictEqual(migrated['2026-04-18'].dayType, 'sick');
+});
+
+test('truly empty entries are still pruned by migration', () => {
+  const migrated = app.migrateEntries({
+    '2026-04-19': { sessions: [], note: '', status: 'open', dayType: 'work' },
+    '2026-04-20': {}
+  });
+  assert.strictEqual(Object.keys(migrated).length, 0);
+});
+
 // ─── Backup validation ───
 
 test('valid backup payload passes validation', () => {
